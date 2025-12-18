@@ -15,42 +15,44 @@ function drawIsoTile(ctx, gridX, gridY, color, height = 0, offsetX = 0, offsetY 
   
   ctx.save();
   
+  // Calculate lift height (in pixels, upward is negative Y)
+  const liftHeight = height > 0 ? height * ISO_TILE_HEIGHT * 2 : 0;
+  
   // Draw side faces if height > 0
   if (height > 0) {
-    const sideHeight = height * 10;
     const darkerColor = color === '#4fa3ff' ? '#3a8fdf' : '#bbb';
     
-    // Left side
+    // Left side (connects base to elevated top)
     ctx.beginPath();
     ctx.moveTo(x, y);
-    ctx.lineTo(x, y + sideHeight);
-    ctx.lineTo(x + ISO_TILE_WIDTH / 2, y + ISO_TILE_HEIGHT / 2 + sideHeight);
-    ctx.lineTo(x + ISO_TILE_WIDTH / 2, y + ISO_TILE_HEIGHT / 2);
+    ctx.lineTo(x, y - liftHeight);
+    ctx.lineTo(x + ISO_TILE_WIDTH / 2, y - ISO_TILE_HEIGHT / 2 - liftHeight);
+    ctx.lineTo(x + ISO_TILE_WIDTH / 2, y - ISO_TILE_HEIGHT / 2);
     ctx.closePath();
     ctx.fillStyle = darkerColor;
     ctx.fill();
     
-    // Right side
+    // Right side (connects base to elevated top)
     ctx.beginPath();
-    ctx.moveTo(x + ISO_TILE_WIDTH / 2, y + ISO_TILE_HEIGHT / 2);
-    ctx.lineTo(x + ISO_TILE_WIDTH / 2, y + ISO_TILE_HEIGHT / 2 + sideHeight);
-    ctx.lineTo(x + ISO_TILE_WIDTH, y + sideHeight);
+    ctx.moveTo(x + ISO_TILE_WIDTH / 2, y - ISO_TILE_HEIGHT / 2);
+    ctx.lineTo(x + ISO_TILE_WIDTH / 2, y - ISO_TILE_HEIGHT / 2 - liftHeight);
+    ctx.lineTo(x + ISO_TILE_WIDTH, y - liftHeight);
     ctx.lineTo(x + ISO_TILE_WIDTH, y);
     ctx.closePath();
     ctx.fillStyle = darkerColor;
     ctx.fill();
   }
   
-  // Draw top face
+  // Draw top face (offset upward by liftHeight for lifted tiles)
   ctx.fillStyle = color;
   ctx.strokeStyle = '#666';
   ctx.lineWidth = 2;
   
   ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(x + ISO_TILE_WIDTH / 2, y - ISO_TILE_HEIGHT / 2);
-  ctx.lineTo(x + ISO_TILE_WIDTH, y);
-  ctx.lineTo(x + ISO_TILE_WIDTH / 2, y + ISO_TILE_HEIGHT / 2);
+  ctx.moveTo(x, y - liftHeight);
+  ctx.lineTo(x + ISO_TILE_WIDTH / 2, y - ISO_TILE_HEIGHT / 2 - liftHeight);
+  ctx.lineTo(x + ISO_TILE_WIDTH, y - liftHeight);
+  ctx.lineTo(x + ISO_TILE_WIDTH / 2, y + ISO_TILE_HEIGHT / 2 - liftHeight);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
@@ -99,7 +101,8 @@ export function drawGrid(ctx, level) {
     isoTileWidth: ISO_TILE_WIDTH,
     isoTileHeight: ISO_TILE_HEIGHT,
     offsetX: gridX,
-    offsetY: gridY
+    offsetY: gridY,
+    level: level // Store level for tile height lookups
   };
   
   // Draw tiles from level data (isometric)
@@ -107,10 +110,30 @@ export function drawGrid(ctx, level) {
     for (let x = 0; x < gridWidth; x++) {
       const tile = level.tiles[y][x];
       
+      // Check for lifted tile (height property or lifted type)
+      const tileHeight = tile.height !== undefined ? tile.height : (tile.type === 'lifted' ? 1 : 0);
+      
+      // Draw hole underneath if tile has height > 0 (lifted tiles have holes beneath them)
+      if (tileHeight > 0) {
+        const { x: isoX, y: isoY } = gridToIso(x, y, gridX, gridY);
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.moveTo(isoX, isoY);
+        ctx.lineTo(isoX + ISO_TILE_WIDTH / 2, isoY - ISO_TILE_HEIGHT / 2);
+        ctx.lineTo(isoX + ISO_TILE_WIDTH, isoY);
+        ctx.lineTo(isoX + ISO_TILE_WIDTH / 2, isoY + ISO_TILE_HEIGHT / 2);
+        ctx.closePath();
+        ctx.fill();
+      }
+      
       if (tile.type === 'start' || tile.type === 'floor') {
-        drawIsoTile(ctx, x, y, '#ddd', 0, gridX, gridY);
+        drawIsoTile(ctx, x, y, '#ddd', tileHeight, gridX, gridY);
       } else if (tile.type === 'goal') {
-        drawIsoTile(ctx, x, y, '#4fa3ff', 1, gridX, gridY);
+        // Goal can be on lifted tile or regular tile
+        drawIsoTile(ctx, x, y, '#4fa3ff', tileHeight, gridX, gridY);
+      } else if (tile.type === 'lifted') {
+        // Lifted tile
+        drawIsoTile(ctx, x, y, '#ddd', tileHeight, gridX, gridY);
       } else if (tile.type === 'hole') {
         // Draw hole as dark pit
         const { x: isoX, y: isoY } = gridToIso(x, y, gridX, gridY);

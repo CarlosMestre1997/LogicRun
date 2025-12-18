@@ -54,7 +54,7 @@ body {
 }
 
 #banner-img {
-  max-width: 100%;
+  max-width: 80%;
   height: auto;
   image-rendering: pixelated;
   image-rendering: crisp-edges;

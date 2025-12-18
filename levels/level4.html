@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Startie – Level 3</title>
+<title>Startie – Level 4</title>
 <link rel="stylesheet" href="../style.css">
 </head>
 <body>
@@ -23,14 +23,13 @@
   
   <div id="ui">
     <div id="ui-header">
-      <strong>Level 3</strong>
+      <strong>Level 4</strong>
       <span id="score">SCORE: 0</span>
     </div>
     <div id="terminal-container">
       <textarea id="terminal">> move()
 > move()
-> spin(r)
-> move(2)</textarea>
+> jump()</textarea>
     </div>
     <button id="run">Run</button>
     <div id="status"></div>
@@ -57,9 +56,9 @@
 <script type="module">
 import { createEngine, calculateScore } from '../engine/index.js';
 import { drawLevel, initRenderer } from '../render/index.js';
-import { level3 } from './level3.js';
+import { level4 } from './level4.js';
 
-const level = level3;
+const level = level4;
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const engine = createEngine(level);
@@ -171,7 +170,6 @@ document.getElementById('run').onclick = () => {
       const score = calculateScore(commandCount);
       scoreDisplay.textContent = `SCORE: ${score}`;
       status.textContent = '✓ Level Complete';
-      setTimeout(() => window.location.href = 'level4.html', 1500);
     } else {
       status.textContent = `Try again (at ${s.x}, ${s.y}, goal is ${level.goal.x}, ${level.goal.y})`;
     }
@@ -184,7 +182,7 @@ document.getElementById('home-btn').onclick = () => {
 };
 
 document.getElementById('prev-btn').onclick = () => {
-  window.location.href = 'level2.html';
+  window.location.href = 'level3.html';
 };
 
 document.getElementById('password-btn').onclick = () => {
@@ -211,8 +209,8 @@ passwordSubmit.onclick = () => {
   const errorDiv = document.getElementById('password-error');
   
   // Simple password system
-  if (password === 'level4') {
-    window.location.href = 'level4.html';
+  if (password === 'level5') {
+    window.location.href = 'level5.html';
   } else {
     errorDiv.textContent = 'Incorrect password';
   }

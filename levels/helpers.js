@@ -24,3 +24,16 @@ export function isValidPosition(level, x, y) {
   return tile.type !== 'void' && tile.type !== 'hole';
 }
 
+export function isLiftedTile(level, x, y) {
+  const tile = getTile(level, x, y);
+  return tile.type === 'lifted' || (tile.height !== undefined && tile.height > 0);
+}
+
+export function getTileHeight(level, x, y) {
+  const tile = getTile(level, x, y);
+  if (tile.type === 'lifted' || (tile.height !== undefined && tile.height > 0)) {
+    return tile.height || 1;
+  }
+  return 0;
+}
+

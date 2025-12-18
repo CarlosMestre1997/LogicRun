@@ -58,11 +58,18 @@ export function drawStartie(ctx, state) {
   // The top point of the diamond is at isoY - ISO_TILE_HEIGHT / 2
   const tileTopY = isoY - ISO_TILE_HEIGHT / 2;
   
-  // Apply height offset (z * tile height) - subtract for jumping
-  const heightOffset = displayZ * ISO_TILE_HEIGHT * 2;
+  // Get tile height (for lifted tiles) - use state.z which stores lifted tile height
+  // For animation, we use displayZ which includes jump animation
+  const tileHeight = state.z || 0; // state.z stores the lifted tile height (0 for ground, 1+ for lifted)
+  
+  // Apply height offset:
+  // - displayZ is for jump animation (0-1 during jump)
+  // - tileHeight is for standing on a lifted tile (0 = ground, 1+ = lifted)
+  const jumpHeightOffset = (displayZ || 0) * ISO_TILE_HEIGHT * 2; // Jump animation
+  const liftedOffset = tileHeight * ISO_TILE_HEIGHT * 2; // Lifted tile height
   
   const pixelX = isoX + ISO_TILE_WIDTH / 2;  // Center horizontally
-  const pixelY = tileTopY - heightOffset;     // Top of tile, minus jump height
+  const pixelY = tileTopY - jumpHeightOffset - liftedOffset;     // Top of tile, minus jump height, minus lifted height
   
   // Get sprite based on facing direction
   const spriteVariant = facingToSprite(state.facing);

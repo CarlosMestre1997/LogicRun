@@ -43,13 +43,7 @@
       align-items: center;
     }
 
-    .logo {
-      background: var(--pink);
-      color: #000;
-      padding: 8px 20px;
-      border-radius: 999px;
-      font-weight: 700;
-    }
+    
 
     nav a {
       margin-left: 24px;
@@ -58,7 +52,7 @@
     }
 
     nav a:hover {
-      color: var(--white);
+      color: #2f6bff;
     }
 
     /* =====================
@@ -110,6 +104,31 @@
     /* =====================
        SECTIONS
     ====================== */
+    .cursor{
+    position: relative;
+    width: 24em;
+    margin: 0 auto;
+    border-right: 2px solid rgba(255,255,255,.75);
+    font-size: 30px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    transform: translateY(-50%);    
+}
+/* Animation */
+.typewriter-animation {
+  animation: 
+    typewriter 2s steps(100) 1s 1 normal both, 
+    blinkingCursor 300ms steps(50) infinite normal;
+}
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+@keyframes blinkingCursor{
+  from { border-right-color: rgba(255,255,255,.75); }
+  to { border-right-color: transparent; }
+}
 
     section {
       padding: 80px 24px;
@@ -146,6 +165,10 @@
       margin-bottom: 8px;
       font-size: 18px;
     }
+    #startie-img{
+      width: 70px;
+      height: 70px;
+    }
 
     /* =====================
        FOOTER
@@ -164,7 +187,7 @@
 
   <!-- HEADER -->
   <header>
-    <div class="logo">StartSchool™</div>
+    <div class="logo"><img src="./assets/logoss.png" alt="StartSchool" id="logo-img"></div>
     <nav>
       <a href="#about">About</a>
       <a href="#game">The Game</a>
@@ -175,7 +198,7 @@
   <!-- HERO -->
   <main class="hero">
     <div>
-      <h1>LOGIC <span>RUN</span></h1>
+      <h1 class="cursor typewriter-animation">LOGIC <span>RUN</span></h1>
       <p>
         Write logic. Watch it run.  
         <br />
@@ -194,6 +217,7 @@
       Players control Startie by writing simple instructions — not by pressing buttons.
       The goal is not to learn syntax, but to learn how to think.
     </p>
+  
   </section>
 
   <!-- FEATURES -->
@@ -223,10 +247,10 @@
       real thinking skills — not just teaching tools. Logic Run is the first step.
     </p>
   </section>
-
+  
   <!-- FOOTER -->
   <footer>
-    © StartSchool™ — Carlos Mestre from batch 2     /2025.
+    © StartSchool™ — Carlos Mestre from batch 2     /2025. <img src="./assets/startie-ld.png" alt="Startie" id="startie-img">
   </footer>
 
 </body>

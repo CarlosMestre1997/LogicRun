@@ -1,6 +1,6 @@
 // Command execution - logic first, animation second
 import { createState, nextTile, rotateFacing, DIR } from './state.js';
-import { isValidPosition, isHole, isGoal } from '../levels/helpers.js';
+import { isValidPosition, isHole, isGoal, isLiftedTile, getTileHeight } from '../levels/helpers.js';
 
 // Animation queue item
 function createAnimation(type, from, to, duration, callback) {
@@ -82,6 +82,15 @@ export function createExecutor(level) {
   
   // Start animation loop
   let animationId = null;
+  let ghostAnimationId = null;
+  
+  function stopAnimationLoop() {
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+  }
+  
   function startAnimationLoop(draw) {
     if (animationId) return;
     
@@ -98,20 +107,41 @@ export function createExecutor(level) {
     animationId = requestAnimationFrame(animate);
   }
   
-  function animateGhost() {
-    // Fly up to the top of the screen (negative Y means above viewport)
-    if (state.ghostY > -300) {
-      state.ghostY -= 6; // Faster movement
+  function animateGhost(draw) {
+    // Stop any ongoing animation loop
+    stopAnimationLoop();
+    
+    // Calculate fade-out threshold (disappear before hitting canvas limit)
+    // Canvas height is typically 300, so start fading at around 50 pixels
+    const fadeStartY = 50;
+    const disappearY = -20; // Disappear completely before canvas edge
+    
+    if (state.ghostY > disappearY) {
+      state.ghostY -= 3; // Slower movement (was 6)
+      
+      // Fade out as ghost approaches top
+      if (state.ghostY < fadeStartY) {
+        const fadeProgress = (fadeStartY - state.ghostY) / (fadeStartY - disappearY);
+        state.ghostAlpha = Math.max(0, 1 - fadeProgress);
+      } else {
+        state.ghostAlpha = 1;
+      }
+      
       draw(state);
-      setTimeout(animateGhost, 16);
+      ghostAnimationId = requestAnimationFrame(() => animateGhost(draw));
     } else {
       // Reset to start position after ghost animation
+      if (ghostAnimationId) {
+        cancelAnimationFrame(ghostAnimationId);
+        ghostAnimationId = null;
+      }
       state.x = level.start.x;
       state.y = level.start.y;
       state.z = 0;
       state.facing = 'SE';
       state.ghostVisible = false;
       state.ghostY = undefined;
+      state.ghostAlpha = undefined;
       state.failed = false;
       // Clear any animation values
       delete state.animX;
@@ -139,6 +169,7 @@ export function createExecutor(level) {
     state.failed = false;
     state.ghostVisible = false;
     state.ghostY = undefined;
+    state.ghostAlpha = undefined;
     state.stepCount = actions.length;
     
     // Reset to start position
@@ -162,7 +193,10 @@ export function createExecutor(level) {
         const target = nextTile(state);
         
         // Check if this move will fail
-        const willFail = !isValidPosition(level, target.x, target.y) || isHole(level, target.x, target.y);
+        // Also fail if trying to move onto a lifted tile (must jump to reach it)
+        const willFail = !isValidPosition(level, target.x, target.y) || 
+                        isHole(level, target.x, target.y) ||
+                        isLiftedTile(level, target.x, target.y);
         
         // COMMIT STATE (logic) - always move to target
         const fromPos = { x: state.x, y: state.y };
@@ -190,7 +224,7 @@ export function createExecutor(level) {
                   state.ghostVisible = true;
                   state.ghostY = getGhostStartY();
                   draw(state);
-                  animateGhost();
+                  animateGhost(draw);
                 }
               ));
               startAnimationLoop(draw);
@@ -212,11 +246,25 @@ export function createExecutor(level) {
           return;
         }
         
-        // Jump moves 2 tiles forward in facing direction
-        const jumpTarget = {
-          x: state.x + DIR[state.facing].dx * 2,
-          y: state.y + DIR[state.facing].dy * 2
+        // Check if there's a lifted tile 1 tile in front
+        const frontTile = {
+          x: state.x + DIR[state.facing].dx,
+          y: state.y + DIR[state.facing].dy
         };
+        
+        let jumpTarget;
+        if (isLiftedTile(level, frontTile.x, frontTile.y)) {
+          // Jump onto the lifted tile directly in front
+          jumpTarget = frontTile;
+          state.z = getTileHeight(level, frontTile.x, frontTile.y);
+        } else {
+          // Normal jump: moves 2 tiles forward
+          jumpTarget = {
+            x: state.x + DIR[state.facing].dx * 2,
+            y: state.y + DIR[state.facing].dy * 2
+          };
+          state.z = 0;
+        }
         
         // Store target for validation after animation
         const willFail = !isValidPosition(level, jumpTarget.x, jumpTarget.y) || isHole(level, jumpTarget.x, jumpTarget.y);
@@ -225,7 +273,6 @@ export function createExecutor(level) {
         const fromPos = { x: state.x, y: state.y };
         state.x = jumpTarget.x;
         state.y = jumpTarget.y;
-        state.z = 0; // Will be set during animation
         
         // QUEUE JUMP ANIMATION (always play the jump)
         animationQueue.push(createAnimation(
@@ -249,7 +296,7 @@ export function createExecutor(level) {
                   state.ghostVisible = true;
                   state.ghostY = getGhostStartY();
                   draw(state);
-                  animateGhost();
+                  animateGhost(draw);
                 }
               ));
               startAnimationLoop(draw);

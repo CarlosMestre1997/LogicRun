@@ -1,7 +1,11 @@
 // Animation effects (ghost, etc.)
 export function drawGhost(ctx, x, y) {
   ctx.save();
-  ctx.globalAlpha = 0.7;
+  // Alpha should be set by caller before calling this function
+  // If not set, default to 0.7
+  if (ctx.globalAlpha === 1.0) {
+    ctx.globalAlpha = 0.7;
+  }
   
   ctx.fillStyle = 'white';
   ctx.beginPath();
@@ -45,7 +49,13 @@ export function drawGhostAtPosition(ctx, state, gridInfo) {
   
   // Only draw if ghostY is defined and valid
   if (ghostY !== undefined && ghostY !== null) {
+    ctx.save();
+    // Apply alpha fade if ghostAlpha is set (multiply with base 0.7)
+    const baseAlpha = 0.7;
+    const fadeAlpha = state.ghostAlpha !== undefined ? state.ghostAlpha * baseAlpha : baseAlpha;
+    ctx.globalAlpha = fadeAlpha;
     drawGhost(ctx, ghostX, ghostY);
+    ctx.restore();
   }
 }
 
