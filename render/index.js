@@ -1,7 +1,7 @@
 // Main render module - combines grid, startie, and animations
 import { drawGrid } from './grid.js';
 import { loadSprites, drawStartie, areSpritesLoaded } from './startie.js';
-import { drawGhostAtPosition } from './animations.js';
+import { drawGhostAtPosition, drawCelebration, loadCelebrateSprite, isCelebrateLoaded } from './animations.js';
 
 let animationContext = null;
 let animationLevel = null;
@@ -10,10 +10,16 @@ let animationId = null;
 
 export function initRenderer(callback) {
   let spritesReady = false;
+  let celebrateReady = false;
   
   loadSprites(() => {
     spritesReady = true;
-    if (callback) callback();
+    if (spritesReady && celebrateReady && callback) callback();
+  });
+  
+  loadCelebrateSprite(() => {
+    celebrateReady = true;
+    if (spritesReady && celebrateReady && callback) callback();
   });
 }
 
@@ -51,5 +57,7 @@ function drawLevelFrame(ctx, level, state) {
   if (state.ghostVisible && state.ghostY !== undefined && window.gridInfo) {
     drawGhostAtPosition(ctx, state, window.gridInfo);
   }
+  
+  // Celebration is now drawn as HTML overlay, not on canvas
 }
 

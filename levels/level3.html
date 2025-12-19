@@ -58,6 +58,7 @@
 import { createEngine, calculateScore } from '../engine/index.js';
 import { drawLevel, initRenderer } from '../render/index.js';
 import { level3 } from './level3.js';
+import { animateCelebration } from '../render/animations.js';
 
 const level = level3;
 const canvas = document.getElementById('canvas');
@@ -171,7 +172,9 @@ document.getElementById('run').onclick = () => {
       const score = calculateScore(commandCount);
       scoreDisplay.textContent = `SCORE: ${score}`;
       status.textContent = '✓ Level Complete';
-      setTimeout(() => window.location.href = 'level4.html', 1500);
+      // Show celebration animation
+      animateCelebration(s, (state) => drawLevel(ctx, level, state), 1500);
+      setTimeout(() => window.location.href = 'level4.html', 2000);
     } else {
       status.textContent = `Try again (at ${s.x}, ${s.y}, goal is ${level.goal.x}, ${level.goal.y})`;
     }

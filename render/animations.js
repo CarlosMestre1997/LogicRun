@@ -1,3 +1,28 @@
+// Celebration image
+let celebrateSprite = null;
+let celebrateLoaded = false;
+
+export function loadCelebrateSprite(callback) {
+  if (celebrateLoaded && celebrateSprite) {
+    if (callback) callback();
+    return;
+  }
+  
+  celebrateSprite = new Image();
+  const isLevelPage = window.location.pathname.includes('levels/');
+  const assetPath = isLevelPage ? '../assets/' : './assets/';
+  
+  celebrateSprite.onload = () => {
+    celebrateLoaded = true;
+    if (callback) callback();
+  };
+  celebrateSprite.src = assetPath + 'celebrate.png';
+}
+
+export function isCelebrateLoaded() {
+  return celebrateLoaded && celebrateSprite && celebrateSprite.complete;
+}
+
 // Animation effects (ghost, etc.)
 export function drawGhost(ctx, x, y) {
   ctx.save();
@@ -57,5 +82,201 @@ export function drawGhostAtPosition(ctx, state, gridInfo) {
     drawGhost(ctx, ghostX, ghostY);
     ctx.restore();
   }
+}
+
+export function drawCelebration(ctx, state, gridInfo) {
+  if (!state.celebrating || !celebrateLoaded || !celebrateSprite) return;
+  
+  if (!gridInfo) return;
+  
+  const canvasWidth = ctx.canvas.width;
+  const canvasHeight = ctx.canvas.height;
+  
+  // Calculate celebration position - center of canvas
+  const centerX = canvasWidth / 2;
+  const centerY = canvasHeight / 2;
+  
+  // Animation properties
+  const scale = state.celebrateScale !== undefined ? state.celebrateScale : 1.0;
+  const alpha = state.celebrateAlpha !== undefined ? state.celebrateAlpha : 1.0;
+  
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(centerX, centerY);
+  
+  const imgWidth = celebrateSprite.width * scale;
+  const imgHeight = celebrateSprite.height * scale;
+  
+  ctx.drawImage(
+    celebrateSprite,
+    -imgWidth / 2,
+    -imgHeight / 2,
+    imgWidth,
+    imgHeight
+  );
+  
+  ctx.restore();
+}
+
+// Create or get celebration overlay element
+function getCelebrationOverlay() {
+  let overlay = document.getElementById('celebration-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'celebration-overlay';
+    overlay.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    `;
+    
+    const img = document.createElement('img');
+    img.id = 'celebration-img';
+    img.style.cssText = `
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      position: absolute;
+    `;
+    const isLevelPage = window.location.pathname.includes('levels/');
+    const assetPath = isLevelPage ? '../assets/' : './assets/';
+    img.src = assetPath + 'celebrate.png';
+    overlay.appendChild(img);
+    
+    // Find the game container and append overlay
+    const gameContainer = document.getElementById('game');
+    if (gameContainer) {
+      gameContainer.style.position = 'relative';
+      gameContainer.appendChild(overlay);
+    }
+  }
+  return overlay;
+}
+
+// Animate celebration - call this function to start the celebration animation
+export function animateCelebration(state, draw, duration = 1500) {
+  if (!state) return;
+  
+  const overlay = getCelebrationOverlay();
+  const img = overlay.querySelector('#celebration-img');
+  
+  if (!img) return;
+  
+  // Set initial state
+  overlay.style.display = 'flex';
+  let scale = 0.3;
+  let alpha = 0;
+  img.style.transform = `scale(${scale})`;
+  img.style.opacity = alpha;
+  
+  // Set base size maintaining aspect ratio - make it bigger
+  const baseWidth = 600;
+  // Only set width, let height scale naturally to maintain aspect ratio
+  img.style.width = baseWidth + 'px';
+  img.style.height = 'auto';
+  
+  const startTime = Date.now();
+  const totalDuration = duration;
+  
+  function animate() {
+    const elapsed = Date.now() - startTime;
+    const progress = Math.min(elapsed / totalDuration, 1);
+    
+    // Scale: pop out effect - grows from 0.3 to 1.2, then bounces back to 1.0
+    if (progress < 0.25) {
+      // Quick pop out
+      const t = progress / 0.25;
+      scale = 0.3 + (1.2 - 0.3) * (1 - Math.pow(1 - t, 3)); // Ease out cubic
+    } else if (progress < 0.5) {
+      // Bounce back
+      const t = (progress - 0.25) / 0.25;
+      scale = 1.2 - (1.2 - 1.0) * (1 - Math.pow(1 - t, 3)); // 1.2 to 1.0
+    } else {
+      // Stay at 1.0
+      scale = 1.0;
+    }
+    
+    // Alpha: fade in quickly, stay visible, then fade out
+    if (progress < 0.2) {
+      alpha = progress / 0.2; // Fade in
+    } else if (progress < 0.7) {
+      alpha = 1.0; // Full opacity
+    } else {
+      alpha = 1.0 - ((progress - 0.7) / 0.3); // Fade out
+    }
+    
+    img.style.transform = `scale(${scale})`;
+    img.style.opacity = alpha;
+    
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      // Animation complete
+      overlay.style.display = 'none';
+    }
+  }
+  
+  animate();
+}
+
+// Animate celebration image in intro modal or any element
+export function animateCelebrationImage(imgElement, duration = 1500) {
+  if (!imgElement) return;
+  
+  let scale = 0.3;
+  let alpha = 0;
+  imgElement.style.transform = `scale(${scale})`;
+  imgElement.style.opacity = alpha;
+  imgElement.style.transition = 'none';
+  
+  const startTime = Date.now();
+  const totalDuration = duration;
+  
+  function animate() {
+    const elapsed = Date.now() - startTime;
+    const progress = Math.min(elapsed / totalDuration, 1);
+    
+    // Scale: pop out effect - grows from 0.3 to 1.2, then bounces back to 1.0
+    if (progress < 0.25) {
+      // Quick pop out
+      const t = progress / 0.25;
+      scale = 0.3 + (1.2 - 0.3) * (1 - Math.pow(1 - t, 3)); // Ease out cubic
+    } else if (progress < 0.5) {
+      // Bounce back
+      const t = (progress - 0.25) / 0.25;
+      scale = 1.2 - (1.2 - 1.0) * (1 - Math.pow(1 - t, 3)); // 1.2 to 1.0
+    } else {
+      // Stay at 1.0
+      scale = 1.0;
+    }
+    
+    // Alpha: fade in quickly, stay visible, then fade out
+    if (progress < 0.2) {
+      alpha = progress / 0.2; // Fade in
+    } else if (progress < 0.7) {
+      alpha = 1.0; // Full opacity
+    } else {
+      alpha = 1.0 - ((progress - 0.7) / 0.3); // Fade out
+    }
+    
+    imgElement.style.transform = `scale(${scale})`;
+    imgElement.style.opacity = alpha;
+    
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      // Animation complete - reset to normal state
+      imgElement.style.opacity = '1';
+      imgElement.style.transform = 'scale(1)';
+    }
+  }
+  
+  animate();
 }
 

@@ -32,6 +32,40 @@
       text-decoration: none;
     }
 
+    #about {
+      padding-bottom: 10px; 
+    }
+
+    #about .about-content {
+      display: flex;
+      align-items: flex-start;
+      gap: 40px;
+    }
+
+    #about .about-text {
+      flex: 1;
+    }
+
+    #about-img {
+      width: 300px;
+      height: auto;
+      border-radius: 6px;
+      flex-shrink: 0;
+      align-self: flex-start;
+      margin-top: 0px;  /* Adjust this value to position it lower */
+    }
+
+    @media (max-width: 768px) {
+      #about .about-content {
+        flex-direction: column;
+      }
+      
+      #about-img {
+        width: 100%;
+        max-width: 300px;
+      }
+    }
+
     /* =====================
        LAYOUT
     ====================== */
@@ -65,6 +99,47 @@
       place-items: center;
       text-align: center;
       padding: 40px 16px;
+      position: relative;
+      overflow: hidden;
+    
+
+    /* Grid background */
+    background-image: 
+        linear-gradient(rgba(255, 95, 168, 0.2) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 95, 168, 0.2) 1px, transparent 1px);
+      background-size: 50px 50px;
+      background-position: 0 0, 0 0;
+    }
+
+    /* Animated pink light overlay */
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, #004aff2b 0%, transparent 30%, rgb(255 95 168 / 0%)
+      45%, rgb(255 95 168 / 0%) 50%, rgb(255 95 168 / 0%) 55%, transparent 60%, transparent 100%);
+      background-size: 200% 100%;
+      animation: gridLight 3s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Ensure hero content is above the animation */
+    .hero > div {
+      position: relative;
+      z-index: 1;
+    }
+
+    @keyframes gridLight {
+      0% {
+        background-position: -100% 0;
+      }
+      100% {
+        background-position: 100% 0;
+      }
     }
 
     .hero h1 {
@@ -209,16 +284,20 @@
     </div>
   </main>
 
-  <!-- ABOUT -->
-  <section id="about">
-    <h2>What is Logic Run?</h2>
-    <p>
-      Logic Run is a browser-based logic game created by StartSchool.
-      Players control Startie by writing simple instructions — not by pressing buttons.
-      The goal is not to learn syntax, but to learn how to think.
-    </p>
-  
-  </section>
+    <!-- ABOUT -->
+    <section id="about">
+      <div class="about-content">
+        <div class="about-text">
+          <h2>What is Logic Run?</h2>
+          <p>
+            Logic Run is a browser-based logic game created by StartSchool.
+            Players control Startie by writing simple instructions — not by pressing buttons.
+            The goal is not to learn syntax, but to learn how to think.
+          </p>
+        </div>
+        <img src="./assets/image.jpeg" alt="Startie" id="about-img">
+      </div>
+    </section>
 
   <!-- FEATURES -->
   <section id="game">

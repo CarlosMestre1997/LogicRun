@@ -53,10 +53,23 @@
   </div>
 </div>
 
+<!-- Intro Modal for Level 1 -->
+<div id="intro-modal" class="modal" style="display: block;">
+  <div class="modal-content" style="max-width: 500px;">
+    <div style="text-align: center; padding: 20px;">
+      <img id="intro-celebrate-img" src="../assets/celebrate.png" alt="Startie" style="width: 300px; height: auto; image-rendering: pixelated; margin-bottom: 20px;">
+      <h2 style="color: var(--white); margin-bottom: 15px;">Hi, I'm Startie!</h2>
+      <p style="color: var(--white); font-size: 16px; line-height: 1.6;">Can you get me to the next level?</p>
+      <button id="intro-close" style="margin-top: 20px; padding: 10px 30px; font-size: 16px; cursor: pointer; background: var(--blue); color: var(--white); border: none; border-radius: 4px;">Let's Go!</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { createEngine, calculateScore } from '../engine/index.js';
 import { drawLevel, initRenderer } from '../render/index.js';
 import { level1 } from './level1.js';
+import { animateCelebration, animateCelebrationImage } from '../render/animations.js';
 
 const level = level1;
 const canvas = document.getElementById('canvas');
@@ -170,7 +183,9 @@ document.getElementById('run').onclick = () => {
       const score = calculateScore(commandCount);
       scoreDisplay.textContent = `SCORE: ${score}`;
       status.textContent = '✓ Level Complete';
-      setTimeout(() => window.location.href = 'level2.html', 1500);
+      // Show celebration animation
+      animateCelebration(s, (state) => drawLevel(ctx, level, state), 1500);
+      setTimeout(() => window.location.href = 'level2.html', 2000);
     } else {
       status.textContent = 'Try again';
     }
@@ -203,6 +218,9 @@ window.onclick = (e) => {
   if (e.target === modal) {
     modal.style.display = 'none';
   }
+  if (e.target === introModal) {
+    introModal.style.display = 'none';
+  }
 };
 
 passwordSubmit.onclick = () => {
@@ -215,6 +233,26 @@ passwordSubmit.onclick = () => {
   } else {
     errorDiv.textContent = 'Incorrect password';
   }
+};
+
+// Intro modal
+const introModal = document.getElementById('intro-modal');
+const introCelebrateImg = document.getElementById('intro-celebrate-img');
+
+// Animate the celebrate image in intro modal
+if (introCelebrateImg) {
+  // Wait for image to load, then animate
+  introCelebrateImg.onload = () => {
+    animateCelebrationImage(introCelebrateImg, 1500);
+  };
+  // If already loaded
+  if (introCelebrateImg.complete) {
+    animateCelebrationImage(introCelebrateImg, 1500);
+  }
+}
+
+document.getElementById('intro-close').onclick = () => {
+  introModal.style.display = 'none';
 };
 </script>
 </body>
