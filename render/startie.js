@@ -1,33 +1,44 @@
 // Character (Startie) rendering - uses discrete grid coordinates
 import { facingToSprite } from '../engine/state.js';
+import { getAssetPath } from '../utils/assets.js';
 
-const sprites = {
-  'rd': new Image(),
-  'ru': new Image(),
-  'lu': new Image(),
-  'ld': new Image()
-};
+const SPRITE_VARIANTS = ['rd', 'ru', 'lu', 'ld'];
+
+const sprites = Object.fromEntries(SPRITE_VARIANTS.map(v => [v, new Image()]));
+const laptopSprites = Object.fromEntries(SPRITE_VARIANTS.map(v => [v, new Image()]));
 
 let spritesLoaded = 0;
+let laptopSpritesLoaded = 0;
+const TOTAL_SPRITES = SPRITE_VARIANTS.length;
+
+function loadSpriteSet(spriteSet, prefix, onLoad) {
+  SPRITE_VARIANTS.forEach(key => {
+    const img = spriteSet[key];
+    img.src = getAssetPath(`${prefix}-${key}.png`);
+    img.onload = () => onLoad(key);
+    if (img.complete) onLoad(key);
+  });
+}
 
 export function loadSprites(callback) {
-  const onLoad = () => {
-    spritesLoaded++;
-    if (spritesLoaded === 4 && callback) callback();
+  spritesLoaded = 0;
+  laptopSpritesLoaded = 0;
+  
+  const checkAllLoaded = () => {
+    if (spritesLoaded === TOTAL_SPRITES && laptopSpritesLoaded === TOTAL_SPRITES && callback) {
+      callback();
+    }
   };
   
-  const isLevelPage = window.location.pathname.includes('levels/');
-  const assetPath = isLevelPage ? '../assets/' : './assets/';
+  loadSpriteSet(sprites, 'startie', () => {
+    spritesLoaded++;
+    checkAllLoaded();
+  });
   
-  sprites.rd.src = assetPath + 'startie-rd.png';
-  sprites.ru.src = assetPath + 'startie-ru.png';
-  sprites.lu.src = assetPath + 'startie-lu.png';
-  sprites.ld.src = assetPath + 'startie-ld.png';
-  
-  sprites.rd.onload = onLoad;
-  sprites.ru.onload = onLoad;
-  sprites.lu.onload = onLoad;
-  sprites.ld.onload = onLoad;
+  loadSpriteSet(laptopSprites, 'startie-laptop', () => {
+    laptopSpritesLoaded++;
+    checkAllLoaded();
+  });
 }
 
 export function drawStartie(ctx, state) {
@@ -65,15 +76,17 @@ export function drawStartie(ctx, state) {
   // Apply height offset:
   // - displayZ is for jump animation (0-1 during jump)
   // - tileHeight is for standing on a lifted tile (0 = ground, 1+ = lifted)
-  const jumpHeightOffset = (displayZ || 0) * ISO_TILE_HEIGHT * 2; // Jump animation
-  const liftedOffset = tileHeight * ISO_TILE_HEIGHT * 2; // Lifted tile height
+  // Match the reduced lift height multiplier from grid.js (1.2 instead of 2)
+  const jumpHeightOffset = (displayZ || 0) * ISO_TILE_HEIGHT * 2; // Jump animation (keep full height for jumps)
+  const liftedOffset = tileHeight * ISO_TILE_HEIGHT * 1.2; // Lifted tile height (reduced for shorter appearance)
   
   const pixelX = isoX + ISO_TILE_WIDTH / 2;  // Center horizontally
   const pixelY = tileTopY - jumpHeightOffset - liftedOffset;     // Top of tile, minus jump height, minus lifted height
   
-  // Get sprite based on facing direction
+  // Get sprite based on facing direction and laptop state
   const spriteVariant = facingToSprite(state.facing);
-  const currentSprite = sprites[spriteVariant];
+  const spriteSet = state.hasLaptop ? laptopSprites : sprites;
+  const currentSprite = spriteSet[spriteVariant];
   
   if (currentSprite && currentSprite.complete && currentSprite.naturalWidth > 0) {
     const spriteSize = (gridInfo.isoTileWidth || 70) * 0.9;  // Increased from 0.8 to 0.9 and base size
@@ -101,5 +114,5 @@ export function drawStartie(ctx, state) {
 }
 
 export function areSpritesLoaded() {
-  return spritesLoaded === 4;
+  return spritesLoaded === TOTAL_SPRITES && laptopSpritesLoaded === TOTAL_SPRITES;
 }

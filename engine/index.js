@@ -1,7 +1,7 @@
 // Main engine module - combines all engine components
 import { parse } from './commands.js';
 import { createExecutor } from './executor.js';
-import { calculateScore } from './rules.js';
+import { calculateScore, countCommands } from './rules.js';
 
 export function createEngine(level) {
   const executor = createExecutor(level);
@@ -13,5 +13,5 @@ export function createEngine(level) {
   };
 }
 
-export { calculateScore };
+export { calculateScore, countCommands };
 

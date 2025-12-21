@@ -1,4 +1,6 @@
 // Celebration image
+import { getAssetPath } from '../utils/assets.js';
+
 let celebrateSprite = null;
 let celebrateLoaded = false;
 
@@ -9,14 +11,11 @@ export function loadCelebrateSprite(callback) {
   }
   
   celebrateSprite = new Image();
-  const isLevelPage = window.location.pathname.includes('levels/');
-  const assetPath = isLevelPage ? '../assets/' : './assets/';
-  
   celebrateSprite.onload = () => {
     celebrateLoaded = true;
     if (callback) callback();
   };
-  celebrateSprite.src = assetPath + 'celebrate.png';
+  celebrateSprite.src = getAssetPath('celebrate.png');
 }
 
 export function isCelebrateLoaded() {
@@ -144,9 +143,7 @@ function getCelebrationOverlay() {
       image-rendering: crisp-edges;
       position: absolute;
     `;
-    const isLevelPage = window.location.pathname.includes('levels/');
-    const assetPath = isLevelPage ? '../assets/' : './assets/';
-    img.src = assetPath + 'celebrate.png';
+    img.src = getAssetPath('celebrate.png');
     overlay.appendChild(img);
     
     // Find the game container and append overlay

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Startie – Level 2</title>
+<title>Startie – Level 5</title>
 <link rel="stylesheet" href="../style.css">
 </head>
 <body>
@@ -23,14 +23,14 @@
   
   <div id="ui">
     <div id="ui-header">
-      <strong>Level 2</strong>
+      <strong>Level 5</strong>
       <span id="score">SCORE: 1000</span>
     </div>
     <div id="terminal-container">
-      <textarea id="terminal" spellcheck="false">> move()
-> move()
+      <textarea id="terminal" spellcheck="false">> move(3)
+> while(hacking) {
 > jump()
-> move()</textarea>
+> }</textarea>
     </div>
     <button id="run">Run</button>
     <div id="status"></div>
@@ -57,11 +57,10 @@
 <script type="module">
 import { createEngine, calculateScore, countCommands } from '../engine/index.js';
 import { drawLevel, initRenderer } from '../render/index.js';
-import { level2 } from './level2.js';
+import { level5 } from './level5.js';
 import { animateCelebration } from '../render/animations.js';
 
-const level = level2;
-
+const level = level5;
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const engine = createEngine(level);
@@ -156,6 +155,7 @@ engine.state.x = level.start.x;
 engine.state.y = level.start.y;
 engine.state.z = 0;
 engine.state.facing = 'SE';
+engine.state.hasLaptop = false;
 
 // Initialize renderer
 initRenderer(() => {
@@ -163,7 +163,12 @@ initRenderer(() => {
 });
 drawLevel(ctx, level, engine.state);
 
-document.getElementById('run').onclick = () => {
+const runButton = document.getElementById('run');
+let isRunning = false;
+
+runButton.onclick = () => {
+  if (isRunning) return; // Prevent multiple clicks
+  
   status.textContent = '';
   const lines = terminal.value.split('\n')
     .map(line => line.trim().replace(/^>\s*/, ''))
@@ -180,16 +185,29 @@ document.getElementById('run').onclick = () => {
     return;
   }
 
+  isRunning = true;
+  runButton.disabled = true;
+  runButton.textContent = 'Running...';
+
   engine.execute(result.actions, s => drawLevel(ctx, level, s), s => {
+    isRunning = false;
+    runButton.disabled = false;
+    runButton.textContent = 'Run';
+    
     if (s.failed) {
       status.textContent = 'Game Over — Try Again';
-    } else if (s.x === level.goal.x && s.y === level.goal.y) {
+    } else if (s.x === level.goal.x && s.y === level.goal.y && s.hasLaptop) {
       const commandCount = countCommands(result.actions);
       const score = calculateScore(commandCount);
       scoreDisplay.textContent = `SCORE: ${score}`;
       status.textContent = '✓ Level Complete';
+      
+      // Disable button during celebration
+      runButton.disabled = true;
       animateCelebration(s, (state) => drawLevel(ctx, level, state), 1500);
-      setTimeout(() => window.location.href = 'level3.html', 2000);
+      setTimeout(() => window.location.href = '../index.html', 2000);
+    } else if (s.x === level.goal.x && s.y === level.goal.y && !s.hasLaptop) {
+      status.textContent = 'You need the laptop to complete this level!';
     } else {
       status.textContent = 'Try again';
     }
@@ -202,7 +220,7 @@ document.getElementById('home-btn').onclick = () => {
 };
 
 document.getElementById('prev-btn').onclick = () => {
-  window.location.href = 'level1.html';
+  window.location.href = 'level4.html';
 };
 
 document.getElementById('password-btn').onclick = () => {
@@ -245,3 +263,4 @@ passwordSubmit.onclick = () => {
 </script>
 </body>
 </html>
+

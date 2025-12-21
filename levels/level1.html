@@ -24,10 +24,10 @@
   <div id="ui">
     <div id="ui-header">
       <strong>Level 1</strong>
-      <span id="score">SCORE: 0</span>
+      <span id="score">SCORE: 1000</span>
     </div>
     <div id="terminal-container">
-      <textarea id="terminal">> move()
+      <textarea id="terminal" spellcheck="false">> move()
 > move()
 > move()</textarea>
     </div>
@@ -66,7 +66,7 @@
 </div>
 
 <script type="module">
-import { createEngine, calculateScore } from '../engine/index.js';
+import { createEngine, calculateScore, countCommands } from '../engine/index.js';
 import { drawLevel, initRenderer } from '../render/index.js';
 import { level1 } from './level1.js';
 import { animateCelebration, animateCelebrationImage } from '../render/animations.js';
@@ -134,6 +134,33 @@ terminal.addEventListener('keydown', (e) => {
 
 terminal.addEventListener('input', formatTerminalLines);
 
+// Real-time score calculation
+function updateScore() {
+  const text = terminal.value;
+  const lines = text.trim()
+    .split('\n')
+    .map(l => l.trim().replace(/^>\s*/, ''))
+    .filter(l => l);
+  
+  if (lines.length === 0) {
+    scoreDisplay.textContent = 'SCORE: 1000';
+    return;
+  }
+  
+  const result = engine.parse(lines.join('\n'));
+  if (result.error || !result.actions) {
+    scoreDisplay.textContent = 'SCORE: 1000';
+    return;
+  }
+  
+  const commandCount = countCommands(result.actions);
+  const score = calculateScore(commandCount);
+  scoreDisplay.textContent = `SCORE: ${score}`;
+}
+
+terminal.addEventListener('input', updateScore);
+updateScore(); // Initialize score
+
 // Initialize game state
 engine.state.x = level.start.x;
 engine.state.y = level.start.y;
@@ -162,7 +189,8 @@ document.getElementById('run').onclick = () => {
     if (s.failed) {
       status.textContent = 'Game Over — Try Again';
     } else if (s.x === level.goal.x && s.y === level.goal.y) {
-      const score = calculateScore(lines.length);
+      const commandCount = countCommands(result.actions);
+      const score = calculateScore(commandCount);
       scoreDisplay.textContent = `SCORE: ${score}`;
       status.textContent = '✓ Level Complete';
       animateCelebration(s, (state) => drawLevel(ctx, level, state), 1500);
@@ -191,7 +219,8 @@ const passwords = {
   'level1': 'level1.html',
   'level2': 'level2.html',
   'level3': 'level3.html',
-  'level4': 'level4.html'
+  'level4': 'level4.html',
+  'level5': 'level5.html'
 };
 
 closeBtn.onclick = () => {

@@ -1,6 +1,23 @@
 // Grid rendering - data-driven from level tiles (isometric)
-const ISO_TILE_WIDTH = 70;  // Increased from 50
-const ISO_TILE_HEIGHT = 35;  // Increased from 25
+import { getAssetPath } from '../utils/assets.js';
+
+const ISO_TILE_WIDTH = 70;
+const ISO_TILE_HEIGHT = 35;
+
+// Laptop image for rendering
+let laptopImage = null;
+let laptopImageLoaded = false;
+
+function loadLaptopImage() {
+  if (laptopImageLoaded) return laptopImage;
+  
+  laptopImage = new Image();
+  laptopImage.onload = () => {
+    laptopImageLoaded = true;
+  };
+  laptopImage.src = getAssetPath('laptop.png');
+  return laptopImage;
+}
 
 // Convert grid coordinates to isometric screen coordinates
 function gridToIso(gridX, gridY, offsetX = 0, offsetY = 0) {
@@ -16,32 +33,10 @@ function drawIsoTile(ctx, gridX, gridY, color, height = 0, offsetX = 0, offsetY 
   ctx.save();
   
   // Calculate lift height (in pixels, upward is negative Y)
-  const liftHeight = height > 0 ? height * ISO_TILE_HEIGHT * 2 : 0;
+  // Reduced multiplier for shorter visual height
+  const liftHeight = height > 0 ? height * ISO_TILE_HEIGHT * 1.2 : 0;
   
-  // Draw side faces if height > 0
-  if (height > 0) {
-    const darkerColor = color === '#4fa3ff' ? '#3a8fdf' : '#bbb';
-    
-    // Left side (connects base to elevated top)
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x, y - liftHeight);
-    ctx.lineTo(x + ISO_TILE_WIDTH / 2, y - ISO_TILE_HEIGHT / 2 - liftHeight);
-    ctx.lineTo(x + ISO_TILE_WIDTH / 2, y - ISO_TILE_HEIGHT / 2);
-    ctx.closePath();
-    ctx.fillStyle = darkerColor;
-    ctx.fill();
-    
-    // Right side (connects base to elevated top)
-    ctx.beginPath();
-    ctx.moveTo(x + ISO_TILE_WIDTH / 2, y - ISO_TILE_HEIGHT / 2);
-    ctx.lineTo(x + ISO_TILE_WIDTH / 2, y - ISO_TILE_HEIGHT / 2 - liftHeight);
-    ctx.lineTo(x + ISO_TILE_WIDTH, y - liftHeight);
-    ctx.lineTo(x + ISO_TILE_WIDTH, y);
-    ctx.closePath();
-    ctx.fillStyle = darkerColor;
-    ctx.fill();
-  }
+  // Don't draw side faces - elevated tiles appear to float without visible support
   
   // Draw top face (offset upward by liftHeight for lifted tiles)
   ctx.fillStyle = color;
@@ -60,7 +55,7 @@ function drawIsoTile(ctx, gridX, gridY, color, height = 0, offsetX = 0, offsetY 
   ctx.restore();
 }
 
-export function drawGrid(ctx, level) {
+export function drawGrid(ctx, level, state = null) {
   // Clear canvas
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -110,11 +105,15 @@ export function drawGrid(ctx, level) {
     for (let x = 0; x < gridWidth; x++) {
       const tile = level.tiles[y][x];
       
+      // Check if there's an elevated goal at this position (defined separately)
+      const elevatedGoalHere = level.goal && level.goal.x === x && level.goal.y === y && level.goal.height > 0;
+      
       // Check for lifted tile (height property or lifted type)
       const tileHeight = tile.height !== undefined ? tile.height : (tile.type === 'lifted' ? 1 : 0);
       
       // Draw hole underneath if tile has height > 0 (lifted tiles have holes beneath them)
-      if (tileHeight > 0) {
+      // BUT skip if this is where an elevated goal is (the void tile already serves as the hole)
+      if (tileHeight > 0 && !elevatedGoalHere) {
         const { x: isoX, y: isoY } = gridToIso(x, y, gridX, gridY);
         ctx.fillStyle = '#000';
         ctx.beginPath();
@@ -128,9 +127,28 @@ export function drawGrid(ctx, level) {
       
       if (tile.type === 'start' || tile.type === 'floor') {
         drawIsoTile(ctx, x, y, '#ddd', tileHeight, gridX, gridY);
+        
+        // Draw laptop image if this is the laptop position and player hasn't picked it up yet
+        if (level.laptop && level.laptop.x === x && level.laptop.y === y && (!state || !state.hasLaptop)) {
+          const laptopImg = loadLaptopImage();
+          if (laptopImg && laptopImageLoaded) {
+            const { x: isoX, y: isoY } = gridToIso(x, y, gridX, gridY);
+            const liftHeight = tileHeight > 0 ? tileHeight * ISO_TILE_HEIGHT * 1.2 : 0;
+            const laptopSize = ISO_TILE_WIDTH * 0.8;
+            const laptopX = isoX + ISO_TILE_WIDTH / 2 - laptopSize / 2;
+            const laptopY = isoY - ISO_TILE_HEIGHT / 2 - liftHeight - laptopSize * 0.3;
+            ctx.drawImage(laptopImg, laptopX, laptopY, laptopSize, laptopSize);
+          }
+        }
       } else if (tile.type === 'goal') {
-        // Goal can be on lifted tile or regular tile
-        drawIsoTile(ctx, x, y, '#4fa3ff', tileHeight, gridX, gridY);
+        // Ground-level goal (tile type is goal)
+        // Goal color: red if no laptop (only for levels with laptop requirement), blue if has laptop or no laptop requirement
+        let goalColor = '#0f00ff'; // Default blue
+        if (level.laptop !== undefined) {
+          // Only level 5 has laptop requirement - show red if no laptop
+          goalColor = (state && state.hasLaptop) ? '#0f00ff' : '#ff4444';
+        }
+        drawIsoTile(ctx, x, y, goalColor, tileHeight, gridX, gridY);
       } else if (tile.type === 'lifted') {
         // Lifted tile
         drawIsoTile(ctx, x, y, '#ddd', tileHeight, gridX, gridY);
@@ -146,19 +164,21 @@ export function drawGrid(ctx, level) {
         ctx.closePath();
         ctx.fill();
       } else if (tile.type === 'void') {
-        // Draw void tiles as subtle grid lines (optional - can be invisible)
-        const { x: isoX, y: isoY } = gridToIso(x, y, gridX, gridY);
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(isoX, isoY);
-        ctx.lineTo(isoX + ISO_TILE_WIDTH / 2, isoY - ISO_TILE_HEIGHT / 2);
-        ctx.lineTo(isoX + ISO_TILE_WIDTH, isoY);
-        ctx.lineTo(isoX + ISO_TILE_WIDTH / 2, isoY + ISO_TILE_HEIGHT / 2);
-        ctx.closePath();
-        ctx.stroke();
+        // Don't draw void tiles at all - they're just empty space
+        // If there's an elevated goal above, it will be drawn separately
       }
     }
+  }
+  
+  // Draw elevated goal if it exists (defined separately from tiles array with height > 0)
+  if (level.goal && level.goal.height > 0) {
+    const { x, y } = level.goal;
+    const goalHeight = level.goal.height;
+    let goalColor = '#0f00ff'; // Match ground-level goal color
+    if (level.laptop !== undefined) {
+      goalColor = (state && state.hasLaptop) ? '#0f00ff' : '#ff4444';
+    }
+    drawIsoTile(ctx, x, y, goalColor, goalHeight, gridX, gridY);
   }
   
   return true;

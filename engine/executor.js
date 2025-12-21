@@ -1,6 +1,6 @@
 // Command execution - logic first, animation second
 import { createState, nextTile, rotateFacing, DIR } from './state.js';
-import { isValidPosition, isHole, isGoal, isLiftedTile, getTileHeight } from '../levels/helpers.js';
+import { isValidPosition, isHole, isGoal, isLiftedTile, getTileHeight, isLaptop } from '../levels/helpers.js';
 
 // Animation queue item
 function createAnimation(type, from, to, duration, callback) {
@@ -107,6 +107,8 @@ export function createExecutor(level) {
     animationId = requestAnimationFrame(animate);
   }
   
+  let currentOnFinish = null;
+  
   function animateGhost(draw) {
     // Stop any ongoing animation loop
     stopAnimationLoop();
@@ -139,6 +141,7 @@ export function createExecutor(level) {
       state.y = level.start.y;
       state.z = 0;
       state.facing = 'SE';
+      state.hasLaptop = false; // Reset laptop when respawning
       state.ghostVisible = false;
       state.ghostY = undefined;
       state.ghostAlpha = undefined;
@@ -149,7 +152,7 @@ export function createExecutor(level) {
       delete state.animZ;
       delete state.animRotation;
       draw(state);
-      onFinish(state);
+      if (currentOnFinish) currentOnFinish(state);
     }
   }
   
@@ -160,11 +163,65 @@ export function createExecutor(level) {
     const ISO_TILE_HEIGHT = gridInfo.isoTileHeight || 35;
     const ISO_OFFSET_Y = gridInfo.offsetY || 120;
     const isoY = ISO_OFFSET_Y + (state.x + state.y) * (ISO_TILE_HEIGHT / 2);
-    const tileTopY = isoY - ISO_TILE_HEIGHT / 2;
-    return tileTopY;
+    return isoY - ISO_TILE_HEIGHT / 2;
+  }
+  
+  // Helper to handle falling animation after failed move/jump
+  function handleFall(draw) {
+    state.failed = true;
+    animationQueue.push(createAnimation(
+      'fall',
+      { z: 0 },
+      { z: -2 },
+      400,
+      () => {
+        state.ghostVisible = true;
+        state.ghostY = getGhostStartY();
+        draw(state);
+        animateGhost(draw);
+      }
+    ));
+    startAnimationLoop(draw);
+  }
+  
+  // Helper to copy body actions for while loop
+  function copyBodyActions(body) {
+    const copy = [];
+    for (const a of body) {
+      if (a.type === 'spin') {
+        copy.push({ type: 'spin', direction: a.direction });
+      } else {
+        copy.push({ type: a.type });
+      }
+    }
+    return copy;
   }
   
   function execute(actions, draw, onFinish) {
+    // Stop all animations and clear queues before starting new execution
+    stopAnimationLoop();
+    if (ghostAnimationId) {
+      cancelAnimationFrame(ghostAnimationId);
+      ghostAnimationId = null;
+    }
+    animationQueue = [];
+    currentAnimation = null;
+    
+    // Clear all animation state properties
+    delete state.animX;
+    delete state.animY;
+    delete state.animZ;
+    delete state.animRotation;
+    delete state.animAlpha;
+    
+    // Helper to check and handle laptop pickup (needs access to draw parameter)
+    function checkLaptopPickup() {
+      if (isLaptop(level, state.x, state.y)) {
+        state.hasLaptop = true;
+        draw(state);
+      }
+    }
+    currentOnFinish = onFinish; // Store for animateGhost to access
     state.queue = [...actions];
     state.failed = false;
     state.ghostVisible = false;
@@ -177,6 +234,7 @@ export function createExecutor(level) {
     state.y = level.start.y;
     state.z = 0;
     state.facing = 'SE';
+    state.hasLaptop = false;
     
     function processAction() {
       if (state.queue.length === 0) {
@@ -210,26 +268,10 @@ export function createExecutor(level) {
           { x: state.x, y: state.y },
           400,
           () => {
-            // After move animation completes, check if we should fall
             if (willFail) {
-              // Character moved into hole/void - show falling animation
-              state.failed = true;
-              animationQueue.push(createAnimation(
-                'fall',
-                { z: 0 },
-                { z: -2 }, // Sink below ground
-                400,
-                () => {
-                  // After falling, show ghost
-                  state.ghostVisible = true;
-                  state.ghostY = getGhostStartY();
-                  draw(state);
-                  animateGhost(draw);
-                }
-              ));
-              startAnimationLoop(draw);
+              handleFall(draw);
             } else {
-              // Successful move, continue
+              checkLaptopPickup();
               processAction();
             }
           }
@@ -267,7 +309,8 @@ export function createExecutor(level) {
         }
         
         // Store target for validation after animation
-        const willFail = !isValidPosition(level, jumpTarget.x, jumpTarget.y) || isHole(level, jumpTarget.x, jumpTarget.y);
+        // If landing on elevated tile (state.z > 0), don't check ground-level validity (elevated goals can have void underneath)
+        const willFail = (state.z === 0 && !isValidPosition(level, jumpTarget.x, jumpTarget.y)) || isHole(level, jumpTarget.x, jumpTarget.y);
         
         // COMMIT STATE - always move to target position
         const fromPos = { x: state.x, y: state.y };
@@ -281,33 +324,62 @@ export function createExecutor(level) {
           { x: state.x, y: state.y },
           600,
           () => {
-            // After jump animation completes, check if we should fall
             if (willFail) {
-              // Character landed on hole/void - show falling animation
-              state.failed = true;
-              // Falling animation: character sinks down
-              animationQueue.push(createAnimation(
-                'fall',
-                { z: 0 },
-                { z: -2 }, // Sink below ground
-                400,
-                () => {
-                  // After falling, show ghost
-                  state.ghostVisible = true;
-                  state.ghostY = getGhostStartY();
-                  draw(state);
-                  animateGhost(draw);
-                }
-              ));
-              startAnimationLoop(draw);
+              handleFall(draw);
             } else {
-              // Successful jump, continue
+              checkLaptopPickup();
               processAction();
             }
           }
         ));
         
         startAnimationLoop(draw);
+        return;
+      }
+
+      if (action.type === 'while') {
+        // while(hacking) means while hasLaptop - can only be used if you have the laptop
+        if (action.condition === 'hacking') {
+          // Check if player has laptop - required to use while(hacking)
+          if (!state.hasLaptop) {
+            state.failed = true;
+            onFinish(state);
+            return;
+          }
+          
+          if (state.hasLaptop && !isGoal(level, state.x, state.y)) {
+            const bodyCopy = copyBodyActions(action.body);
+            for (let i = bodyCopy.length - 1; i >= 0; i--) {
+              state.queue.unshift(bodyCopy[i]);
+            }
+            state.queue.push({ type: 'while-check', originalAction: action });
+            processAction();
+          } else {
+            processAction();
+          }
+        } else {
+          state.failed = true;
+          onFinish(state);
+          return;
+        }
+        return;
+      }
+      
+      if (action.type === 'while-check') {
+        // This runs after while loop body completes - re-check the condition
+        const originalAction = action.originalAction;
+        if (originalAction.condition === 'hacking') {
+          if (state.hasLaptop && !isGoal(level, state.x, state.y)) {
+            const bodyCopy = copyBodyActions(originalAction.body);
+            for (let i = bodyCopy.length - 1; i >= 0; i--) {
+              state.queue.unshift(bodyCopy[i]);
+            }
+            state.queue.push({ type: 'while-check', originalAction: originalAction });
+            processAction();
+          } else {
+            processAction();
+          }
+        }
         return;
       }
 

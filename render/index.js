@@ -1,33 +1,30 @@
 // Main render module - combines grid, startie, and animations
 import { drawGrid } from './grid.js';
 import { loadSprites, drawStartie, areSpritesLoaded } from './startie.js';
-import { drawGhostAtPosition, drawCelebration, loadCelebrateSprite, isCelebrateLoaded } from './animations.js';
+import { loadCelebrateSprite, drawGhostAtPosition } from './animations.js';
 
-let animationContext = null;
-let animationLevel = null;
-let animationState = null;
 let animationId = null;
 
 export function initRenderer(callback) {
   let spritesReady = false;
   let celebrateReady = false;
   
+  const checkReady = () => {
+    if (spritesReady && celebrateReady && callback) callback();
+  };
+  
   loadSprites(() => {
     spritesReady = true;
-    if (spritesReady && celebrateReady && callback) callback();
+    checkReady();
   });
   
   loadCelebrateSprite(() => {
     celebrateReady = true;
-    if (spritesReady && celebrateReady && callback) callback();
+    checkReady();
   });
 }
 
 export function drawLevel(ctx, level, state) {
-  animationContext = ctx;
-  animationLevel = level;
-  animationState = state;
-  
   drawLevelFrame(ctx, level, state);
   
   // Redraw when sprites load
@@ -46,7 +43,7 @@ export function drawLevel(ctx, level, state) {
 
 function drawLevelFrame(ctx, level, state) {
   // Draw grid (data-driven from level tiles)
-  drawGrid(ctx, level);
+  drawGrid(ctx, level, state);
   
   // Draw character (uses discrete x, y, z coordinates)
   if (!state.ghostVisible) {

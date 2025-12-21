@@ -9,7 +9,8 @@ export function createState() {
     failed: false,
     ghostVisible: false,
     ghostY: undefined, // for ghost animation only
-    stepCount: 0
+    stepCount: 0,
+    hasLaptop: false // track if player has picked up laptop
   };
 }
 
@@ -23,6 +24,7 @@ export function resetState(state) {
   state.ghostVisible = false;
   state.ghostY = undefined;
   state.stepCount = 0;
+  state.hasLaptop = false;
 }
 
 // Direction vectors
