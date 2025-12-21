@@ -176,7 +176,7 @@ export function animateCelebration(state, draw, duration = 1500) {
   img.style.opacity = alpha;
   
   // Set base size maintaining aspect ratio - make it bigger
-  const baseWidth = 600;
+  const baseWidth = 700;
   // Only set width, let height scale naturally to maintain aspect ratio
   img.style.width = baseWidth + 'px';
   img.style.height = 'auto';

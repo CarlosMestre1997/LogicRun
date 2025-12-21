@@ -56,11 +56,11 @@
 <!-- Intro Modal for Level 1 -->
 <div id="intro-modal" class="modal" style="display: block;">
   <div class="modal-content" style="max-width: 500px;">
-    <div style="text-align: center; padding: 20px;">
-      <img id="intro-celebrate-img" src="../assets/celebrate.png" alt="Startie" style="width: 300px; height: auto; image-rendering: pixelated; margin-bottom: 20px;">
+    <div style="text-align: center; padding: 0px;">
+      <img id="intro-celebrate-img" src="../assets/celebrate.png" alt="Startie" style="width: 400px; height: auto; image-rendering: pixelated;">
       <h2 style="color: var(--white); margin-bottom: 15px;">Hi, I'm Startie!</h2>
       <p style="color: var(--white); font-size: 16px; line-height: 1.6;">Can you get me to the next level?</p>
-      <button id="intro-close" style="margin-top: 20px; padding: 10px 30px; font-size: 16px; cursor: pointer; background: var(--blue); color: var(--white); border: none; border-radius: 4px;">Let's Go!</button>
+      <button id="intro-close" style="margin-top: 10px; padding: 10px 30px; font-size: 16px; cursor: pointer; background: #0f00ff; color: #ff6fb8; border: none; border-radius: 4px;">Let's Go!</button>
     </div>
   </div>
 </div>
@@ -79,7 +79,7 @@ const status = document.getElementById('status');
 const scoreDisplay = document.getElementById('score');
 const terminal = document.getElementById('terminal');
 
-// Ensure each line starts with >
+// Terminal input formatting
 function formatTerminalLines() {
   const lines = terminal.value.split('\n');
   const formatted = lines.map(line => {
@@ -92,7 +92,6 @@ function formatTerminalLines() {
   if (newValue !== terminal.value) {
     const cursorPos = terminal.selectionStart;
     terminal.value = newValue;
-    // Restore cursor position
     terminal.setSelectionRange(cursorPos, cursorPos);
   }
 }
@@ -104,39 +103,23 @@ terminal.addEventListener('keydown', (e) => {
     const start = terminal.selectionStart;
     const end = terminal.selectionEnd;
     const text = terminal.value;
-    
-    // Get current line
-    const lines = text.substring(0, start).split('\n');
-    const currentLine = lines[lines.length - 1];
-    
-    // Insert newline with >
     const before = text.substring(0, start);
     const after = text.substring(end);
     terminal.value = before + '\n> ' + after;
-    
-    // Set cursor after the >
-    const newPos = start + 3;
-    terminal.setSelectionRange(newPos, newPos);
+    terminal.setSelectionRange(start + 3, start + 3);
   }
   
-  // Handle Backspace at start of line (after >) - delete the line
+  // Handle Backspace at start of line - delete the line
   if (e.key === 'Backspace') {
     const start = terminal.selectionStart;
     const text = terminal.value;
-    
-    // Check if cursor is right after "> "
     if (start >= 2 && text.substring(start - 2, start) === '> ') {
-      // Check if we're at the start of a line
       const beforeCursor = text.substring(0, start - 2);
       if (beforeCursor.endsWith('\n') || beforeCursor === '') {
         e.preventDefault();
-        // Find the line start
-        const lines = text.substring(0, start - 2).split('\n');
         const lineStart = text.substring(0, start - 2).lastIndexOf('\n') + 1;
         const lineEnd = text.indexOf('\n', start);
         const endPos = lineEnd === -1 ? text.length : lineEnd + 1;
-        
-        // Delete the line including the newline before it (if not first line)
         if (lineStart > 0) {
           terminal.value = text.substring(0, lineStart - 1) + text.substring(endPos);
           terminal.setSelectionRange(lineStart - 1, lineStart - 1);
@@ -149,16 +132,15 @@ terminal.addEventListener('keydown', (e) => {
   }
 });
 
-// Format on input
 terminal.addEventListener('input', formatTerminalLines);
 
-// Set initial state to level start position
+// Initialize game state
 engine.state.x = level.start.x;
 engine.state.y = level.start.y;
 engine.state.z = 0;
 engine.state.facing = 'SE';
 
-// Initialize renderer and draw initial state
+// Initialize renderer
 initRenderer(() => {
   drawLevel(ctx, level, engine.state);
 });
@@ -166,24 +148,23 @@ drawLevel(ctx, level, engine.state);
 
 document.getElementById('run').onclick = () => {
   status.textContent = '';
-  
-  // Extract commands from terminal (remove > prefix)
   const lines = terminal.value.split('\n')
     .map(line => line.trim().replace(/^>\s*/, ''))
     .filter(text => text.length > 0);
   
   const result = engine.parse(lines.join('\n'));
-  if (result.error) return status.textContent = result.error;
+  if (result.error) {
+    status.textContent = result.error;
+    return;
+  }
 
   engine.execute(result.actions, s => drawLevel(ctx, level, s), s => {
     if (s.failed) {
       status.textContent = 'Game Over — Try Again';
     } else if (s.x === level.goal.x && s.y === level.goal.y) {
-      const commandCount = lines.length;
-      const score = calculateScore(commandCount);
+      const score = calculateScore(lines.length);
       scoreDisplay.textContent = `SCORE: ${score}`;
       status.textContent = '✓ Level Complete';
-      // Show celebration animation
       animateCelebration(s, (state) => drawLevel(ctx, level, state), 1500);
       setTimeout(() => window.location.href = 'level2.html', 2000);
     } else {
@@ -192,31 +173,34 @@ document.getElementById('run').onclick = () => {
   });
 };
 
-// Navigation buttons
+// Navigation
 document.getElementById('home-btn').onclick = () => {
   window.location.href = '../index.html';
-};
-
-document.getElementById('prev-btn').onclick = () => {
-  // Already on level 1, no previous level
 };
 
 document.getElementById('password-btn').onclick = () => {
   document.getElementById('password-modal').style.display = 'block';
 };
 
-// Password modal
-const modal = document.getElementById('password-modal');
+// Password system
+const passwordModal = document.getElementById('password-modal');
 const closeBtn = document.querySelector('.close');
 const passwordSubmit = document.getElementById('password-submit');
 
+const passwords = {
+  'level1': 'level1.html',
+  'level2': 'level2.html',
+  'level3': 'level3.html',
+  'level4': 'level4.html'
+};
+
 closeBtn.onclick = () => {
-  modal.style.display = 'none';
+  passwordModal.style.display = 'none';
 };
 
 window.onclick = (e) => {
-  if (e.target === modal) {
-    modal.style.display = 'none';
+  if (e.target === passwordModal) {
+    passwordModal.style.display = 'none';
   }
   if (e.target === introModal) {
     introModal.style.display = 'none';
@@ -224,12 +208,11 @@ window.onclick = (e) => {
 };
 
 passwordSubmit.onclick = () => {
-  const password = document.getElementById('password-input').value;
+  const password = document.getElementById('password-input').value.trim().toLowerCase();
   const errorDiv = document.getElementById('password-error');
   
-  // Simple password system - can be expanded
-  if (password === 'level3') {
-    window.location.href = 'level3.html';
+  if (passwords[password]) {
+    window.location.href = passwords[password];
   } else {
     errorDiv.textContent = 'Incorrect password';
   }
@@ -239,13 +222,10 @@ passwordSubmit.onclick = () => {
 const introModal = document.getElementById('intro-modal');
 const introCelebrateImg = document.getElementById('intro-celebrate-img');
 
-// Animate the celebrate image in intro modal
 if (introCelebrateImg) {
-  // Wait for image to load, then animate
   introCelebrateImg.onload = () => {
     animateCelebrationImage(introCelebrateImg, 1500);
   };
-  // If already loaded
   if (introCelebrateImg.complete) {
     animateCelebrationImage(introCelebrateImg, 1500);
   }

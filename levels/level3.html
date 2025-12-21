@@ -68,7 +68,7 @@ const status = document.getElementById('status');
 const scoreDisplay = document.getElementById('score');
 const terminal = document.getElementById('terminal');
 
-// Ensure each line starts with >
+// Terminal input formatting
 function formatTerminalLines() {
   const lines = terminal.value.split('\n');
   const formatted = lines.map(line => {
@@ -92,31 +92,23 @@ terminal.addEventListener('keydown', (e) => {
     const start = terminal.selectionStart;
     const end = terminal.selectionEnd;
     const text = terminal.value;
-    
-    const lines = text.substring(0, start).split('\n');
-    const currentLine = lines[lines.length - 1];
-    
     const before = text.substring(0, start);
     const after = text.substring(end);
     terminal.value = before + '\n> ' + after;
-    
-    const newPos = start + 3;
-    terminal.setSelectionRange(newPos, newPos);
+    terminal.setSelectionRange(start + 3, start + 3);
   }
   
+  // Handle Backspace at start of line - delete the line
   if (e.key === 'Backspace') {
     const start = terminal.selectionStart;
     const text = terminal.value;
-    
     if (start >= 2 && text.substring(start - 2, start) === '> ') {
       const beforeCursor = text.substring(0, start - 2);
       if (beforeCursor.endsWith('\n') || beforeCursor === '') {
         e.preventDefault();
-        const lines = text.substring(0, start - 2).split('\n');
         const lineStart = text.substring(0, start - 2).lastIndexOf('\n') + 1;
         const lineEnd = text.indexOf('\n', start);
         const endPos = lineEnd === -1 ? text.length : lineEnd + 1;
-        
         if (lineStart > 0) {
           terminal.value = text.substring(0, lineStart - 1) + text.substring(endPos);
           terminal.setSelectionRange(lineStart - 1, lineStart - 1);
@@ -129,16 +121,15 @@ terminal.addEventListener('keydown', (e) => {
   }
 });
 
-// Format on input
 terminal.addEventListener('input', formatTerminalLines);
 
-// Set initial state to level start position
+// Initialize game state
 engine.state.x = level.start.x;
 engine.state.y = level.start.y;
 engine.state.z = 0;
 engine.state.facing = 'SE';
 
-// Initialize renderer and draw initial state
+// Initialize renderer
 initRenderer(() => {
   drawLevel(ctx, level, engine.state);
 });
@@ -146,8 +137,6 @@ drawLevel(ctx, level, engine.state);
 
 document.getElementById('run').onclick = () => {
   status.textContent = '';
-  
-  // Extract commands from terminal (remove > prefix)
   const lines = terminal.value.split('\n')
     .map(line => line.trim().replace(/^>\s*/, ''))
     .filter(text => text.length > 0);
@@ -166,22 +155,19 @@ document.getElementById('run').onclick = () => {
   engine.execute(result.actions, s => drawLevel(ctx, level, s), s => {
     if (s.failed) {
       status.textContent = 'Game Over — Try Again';
-      // State is already reset by animateGhost
     } else if (s.x === level.goal.x && s.y === level.goal.y) {
-      const commandCount = lines.length;
-      const score = calculateScore(commandCount);
+      const score = calculateScore(lines.length);
       scoreDisplay.textContent = `SCORE: ${score}`;
       status.textContent = '✓ Level Complete';
-      // Show celebration animation
       animateCelebration(s, (state) => drawLevel(ctx, level, state), 1500);
       setTimeout(() => window.location.href = 'level4.html', 2000);
     } else {
-      status.textContent = `Try again (at ${s.x}, ${s.y}, goal is ${level.goal.x}, ${level.goal.y})`;
+      status.textContent = 'Try again';
     }
   });
 };
 
-// Navigation buttons
+// Navigation
 document.getElementById('home-btn').onclick = () => {
   window.location.href = '../index.html';
 };
@@ -194,28 +180,34 @@ document.getElementById('password-btn').onclick = () => {
   document.getElementById('password-modal').style.display = 'block';
 };
 
-// Password modal
-const modal = document.getElementById('password-modal');
+// Password system
+const passwordModal = document.getElementById('password-modal');
 const closeBtn = document.querySelector('.close');
 const passwordSubmit = document.getElementById('password-submit');
 
+const passwords = {
+  'level1': 'level1.html',
+  'level2': 'level2.html',
+  'level3': 'level3.html',
+  'level4': 'level4.html'
+};
+
 closeBtn.onclick = () => {
-  modal.style.display = 'none';
+  passwordModal.style.display = 'none';
 };
 
 window.onclick = (e) => {
-  if (e.target === modal) {
-    modal.style.display = 'none';
+  if (e.target === passwordModal) {
+    passwordModal.style.display = 'none';
   }
 };
 
 passwordSubmit.onclick = () => {
-  const password = document.getElementById('password-input').value;
+  const password = document.getElementById('password-input').value.trim().toLowerCase();
   const errorDiv = document.getElementById('password-error');
   
-  // Simple password system
-  if (password === 'level4') {
-    window.location.href = 'level4.html';
+  if (passwords[password]) {
+    window.location.href = passwords[password];
   } else {
     errorDiv.textContent = 'Incorrect password';
   }
