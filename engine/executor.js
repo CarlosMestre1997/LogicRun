@@ -1,6 +1,7 @@
 // Command execution - logic first, animation second
 import { createState, nextTile, rotateFacing, DIR } from './state.js';
 import { isValidPosition, isHole, isGoal, isLiftedTile, getTileHeight, isLaptop } from '../levels/helpers.js';
+import { playJumpSound, playSpinSound, playFallSound } from '../utils/sounds.js';
 
 // Animation queue item
 function createAnimation(type, from, to, duration, callback) {
@@ -169,6 +170,10 @@ export function createExecutor(level) {
   // Helper to handle falling animation after failed move/jump
   function handleFall(draw) {
     state.failed = true;
+    
+    // Play fall sound
+    playFallSound();
+    
     animationQueue.push(createAnimation(
       'fall',
       { z: 0 },
@@ -317,6 +322,9 @@ export function createExecutor(level) {
         state.x = jumpTarget.x;
         state.y = jumpTarget.y;
         
+        // Play jump sound
+        playJumpSound();
+        
         // QUEUE JUMP ANIMATION (always play the jump)
         animationQueue.push(createAnimation(
           'jump',
@@ -386,6 +394,9 @@ export function createExecutor(level) {
       if (action.type === 'spin') {
         // LOGIC FIRST: Update facing (discrete state change)
         state.facing = rotateFacing(state.facing, action.direction);
+        
+        // Play spin sound
+        playSpinSound();
         
         // QUEUE ANIMATION (visual only)
         animationQueue.push(createAnimation(

@@ -16,6 +16,6 @@ export const level1 = {
     // Row 4 (y: 4)
     [{ type: 'floor' }, { type: 'floor' }, { type: 'floor' }, { type: 'floor' }, { type: 'floor' }]
   ],
-  allowJump: false,
+  allowJump: true,
   levelNumber: 1
 };
