@@ -183,7 +183,7 @@ engine.state.facing = 'SE';
 // Initialize renderer
 initRenderer(() => {
   drawLevel(ctx, level, engine.state);
-});
+}, level);
 drawLevel(ctx, level, engine.state);
 
 document.getElementById('run').onclick = () => {

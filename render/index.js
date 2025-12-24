@@ -1,16 +1,17 @@
 // Main render module - combines grid, startie, and animations
-import { drawGrid } from './grid.js';
+import { drawGrid, loadLaptopImage, isLaptopImageLoaded } from './grid.js';
 import { loadSprites, drawStartie, areSpritesLoaded } from './startie.js';
 import { loadCelebrateSprite, drawGhostAtPosition } from './animations.js';
 
 let animationId = null;
 
-export function initRenderer(callback) {
+export function initRenderer(callback, level = null) {
   let spritesReady = false;
   let celebrateReady = false;
+  let laptopReady = true; // Default to true, only false if level has laptop
   
   const checkReady = () => {
-    if (spritesReady && celebrateReady && callback) callback();
+    if (spritesReady && celebrateReady && laptopReady && callback) callback();
   };
   
   loadSprites(() => {
@@ -22,15 +23,31 @@ export function initRenderer(callback) {
     celebrateReady = true;
     checkReady();
   });
+  
+  // Preload laptop image if level has laptop
+  if (level && level.laptop) {
+    laptopReady = false;
+    loadLaptopImage(() => {
+      laptopReady = true;
+      checkReady();
+    });
+  } else {
+    checkReady();
+  }
 }
 
 export function drawLevel(ctx, level, state) {
   drawLevelFrame(ctx, level, state);
   
-  // Redraw when sprites load
-  if (!areSpritesLoaded() && !animationId) {
+  // Redraw when sprites or laptop image load
+  const needsLaptop = level && level.laptop;
+  const assetsLoaded = areSpritesLoaded() && (!needsLaptop || isLaptopImageLoaded());
+  
+  if (!assetsLoaded && !animationId) {
     function checkAndRender() {
-      if (areSpritesLoaded()) {
+      const needsLaptopCheck = level && level.laptop;
+      const allAssetsLoaded = areSpritesLoaded() && (!needsLaptopCheck || isLaptopImageLoaded());
+      if (allAssetsLoaded) {
         drawLevelFrame(ctx, level, state);
         animationId = null;
       } else {

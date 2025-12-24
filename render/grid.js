@@ -7,16 +7,36 @@ const ISO_TILE_HEIGHT = 35;
 // Laptop image for rendering
 let laptopImage = null;
 let laptopImageLoaded = false;
+let laptopImageCallbacks = [];
 
-function loadLaptopImage() {
-  if (laptopImageLoaded) return laptopImage;
+export function loadLaptopImage(callback) {
+  if (laptopImageLoaded) {
+    if (callback) callback();
+    return laptopImage;
+  }
+  
+  if (callback) {
+    laptopImageCallbacks.push(callback);
+  }
+  
+  if (laptopImage) {
+    // Already loading
+    return laptopImage;
+  }
   
   laptopImage = new Image();
   laptopImage.onload = () => {
     laptopImageLoaded = true;
+    // Call all pending callbacks
+    laptopImageCallbacks.forEach(cb => cb());
+    laptopImageCallbacks = [];
   };
   laptopImage.src = getAssetPath('laptop.png');
   return laptopImage;
+}
+
+export function isLaptopImageLoaded() {
+  return laptopImageLoaded;
 }
 
 // Convert grid coordinates to isometric screen coordinates

@@ -184,7 +184,7 @@ engine.state.hasLaptop = false;
 // Initialize renderer
 initRenderer(() => {
   drawLevel(ctx, level, engine.state);
-});
+}, level);
 drawLevel(ctx, level, engine.state);
 
 const runButton = document.getElementById('run');
