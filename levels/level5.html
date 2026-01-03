@@ -231,7 +231,7 @@ runButton.onclick = () => {
       runButton.disabled = true;
       animateCelebration(s, (state) => drawLevel(ctx, level, state), 1500);
       saveMusicPosition(); // Save position before navigation
-      setTimeout(() => window.location.href = '../index.html', 2000);
+      setTimeout(() => window.location.href = 'level6.html', 2000);
     } else if (s.x === level.goal.x && s.y === level.goal.y && !s.hasLaptop) {
       status.textContent = 'You need the laptop to complete this level!';
     } else {
@@ -270,7 +270,9 @@ const passwords = {
   'level2': 'level2.html',
   'level3': 'level3.html',
   'level4': 'level4.html',
-  'level5': 'level5.html'
+  'level5': 'level5.html',
+  'level6': 'level6.html',
+  'level7': 'level7.html'
 };
 
 closeBtn.onclick = () => {

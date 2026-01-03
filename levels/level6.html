@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Startie – Level 1</title>
+<title>Startie – Level 6</title>
 <link rel="stylesheet" href="../style.css">
 </head>
 <body>
@@ -23,16 +23,14 @@
   
   <div id="ui">
     <div id="ui-header">
-      <strong>Level 1</strong>
+      <strong>Level 6</strong>
       <div style="display: flex; align-items: center;">
         <span id="score">SCORE: 1000</span>
         <button id="sound-toggle" title="Toggle Sound">🔊</button>
       </div>
     </div>
     <div id="terminal-container">
-      <textarea id="terminal" spellcheck="false">> move()
-> move()
-> move()</textarea>
+      <textarea id="terminal" spellcheck="false">> move()</textarea>
     </div>
     <button id="run">Run</button>
     <div id="status"></div>
@@ -41,7 +39,7 @@
 
 <div id="nav-buttons">
   <button id="home-btn" class="nav-btn" title="Home"></button>
-  <button id="prev-btn" class="nav-btn" title="Previous Level" disabled></button>
+  <button id="prev-btn" class="nav-btn" title="Previous Level"></button>
   <button id="password-btn" class="nav-btn" title="Enter Password">*</button>
 </div>
 
@@ -56,26 +54,14 @@
   </div>
 </div>
 
-<!-- Intro Modal for Level 1 -->
-<div id="intro-modal" class="modal" style="display: block;">
-  <div class="modal-content" style="max-width: 500px;">
-    <div style="text-align: center; padding: 0px;">
-      <img id="intro-celebrate-img" src="../assets/celebrate.png" alt="Startie" style="width: 400px; height: auto; image-rendering: pixelated;">
-      <h2 style="color: var(--white); margin-bottom: 15px;">Hi, I'm Startie!</h2>
-      <p style="color: var(--white); font-size: 16px; line-height: 1.6;">Can you get me to the next level?</p>
-      <button id="intro-close" style="margin-top: 10px; padding: 10px 30px; font-size: 16px; cursor: pointer; background: #0f00ff; color: #ff6fb8; border: none; border-radius: 4px;">Let's Go!</button>
-    </div>
-  </div>
-</div>
-
 <script type="module">
 import { createEngine, calculateScore, countCommands } from '../engine/index.js';
 import { drawLevel, initRenderer } from '../render/index.js';
-import { level1 } from './level1.js';
-import { animateCelebration, animateCelebrationImage } from '../render/animations.js';
+import { level6 } from './level6.js';
+import { animateCelebration } from '../render/animations.js';
 import { initSounds, loadSoundPreference, toggleSound, isSoundEnabled, playBackgroundMusic, saveMusicPosition } from '../utils/sounds.js';
 
-const level = level1;
+const level = level6;
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const engine = createEngine(level);
@@ -87,8 +73,8 @@ const terminal = document.getElementById('terminal');
 loadSoundPreference();
 initSounds();
 
-// Start background music automatically when level 1 loads (force start on first level)
-playBackgroundMusic(true);
+// Start background music automatically when level loads (continues from previous level)
+playBackgroundMusic();
 
 // Sound toggle button
 const soundToggle = document.getElementById('sound-toggle');
@@ -190,6 +176,7 @@ engine.state.x = level.start.x;
 engine.state.y = level.start.y;
 engine.state.z = 0;
 engine.state.facing = 'SE';
+engine.state.hasLaptop = false;
 
 // Initialize renderer
 initRenderer(() => {
@@ -197,7 +184,12 @@ initRenderer(() => {
 }, level);
 drawLevel(ctx, level, engine.state);
 
-document.getElementById('run').onclick = () => {
+const runButton = document.getElementById('run');
+let isRunning = false;
+
+runButton.onclick = () => {
+  if (isRunning) return; // Prevent multiple clicks
+  
   status.textContent = '';
   
   const lines = terminal.value.split('\n')
@@ -210,7 +202,20 @@ document.getElementById('run').onclick = () => {
     return;
   }
 
+  if (!result.actions || result.actions.length === 0) {
+    status.textContent = 'No commands to execute';
+    return;
+  }
+
+  isRunning = true;
+  runButton.disabled = true;
+  runButton.textContent = 'Running...';
+
   engine.execute(result.actions, s => drawLevel(ctx, level, s), s => {
+    isRunning = false;
+    runButton.disabled = false;
+    runButton.textContent = 'Run';
+    
     if (s.failed) {
       status.textContent = 'Game Over — Try Again';
     } else if (s.x === level.goal.x && s.y === level.goal.y) {
@@ -218,9 +223,12 @@ document.getElementById('run').onclick = () => {
       const score = calculateScore(commandCount);
       scoreDisplay.textContent = `SCORE: ${score}`;
       status.textContent = '✓ Level Complete';
+      
+      // Disable button during celebration
+      runButton.disabled = true;
       animateCelebration(s, (state) => drawLevel(ctx, level, state), 1500);
       saveMusicPosition(); // Save position before navigation
-      setTimeout(() => window.location.href = 'level2.html', 2000);
+      setTimeout(() => window.location.href = 'level7.html', 2000);
     } else {
       status.textContent = 'Try again';
     }
@@ -236,6 +244,11 @@ window.addEventListener('beforeunload', () => {
 document.getElementById('home-btn').onclick = () => {
   saveMusicPosition();
   window.location.href = '../index.html';
+};
+
+document.getElementById('prev-btn').onclick = () => {
+  saveMusicPosition();
+  window.location.href = 'level5.html';
 };
 
 document.getElementById('password-btn').onclick = () => {
@@ -265,9 +278,6 @@ window.onclick = (e) => {
   if (e.target === passwordModal) {
     passwordModal.style.display = 'none';
   }
-  if (e.target === introModal) {
-    introModal.style.display = 'none';
-  }
 };
 
 passwordSubmit.onclick = () => {
@@ -281,23 +291,7 @@ passwordSubmit.onclick = () => {
     errorDiv.textContent = 'Incorrect password';
   }
 };
-
-// Intro modal
-const introModal = document.getElementById('intro-modal');
-const introCelebrateImg = document.getElementById('intro-celebrate-img');
-
-if (introCelebrateImg) {
-  introCelebrateImg.onload = () => {
-    animateCelebrationImage(introCelebrateImg, 1500);
-  };
-  if (introCelebrateImg.complete) {
-    animateCelebrationImage(introCelebrateImg, 1500);
-  }
-}
-
-document.getElementById('intro-close').onclick = () => {
-  introModal.style.display = 'none';
-};
 </script>
 </body>
 </html>
+

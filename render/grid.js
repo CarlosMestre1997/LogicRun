@@ -56,7 +56,31 @@ function drawIsoTile(ctx, gridX, gridY, color, height = 0, offsetX = 0, offsetY 
   // Reduced multiplier for shorter visual height
   const liftHeight = height > 0 ? height * ISO_TILE_HEIGHT * 1.2 : 0;
   
-  // Don't draw side faces - elevated tiles appear to float without visible support
+  // Draw subtle shadows on sides of elevated tiles
+  if (height > 0) {
+    // Create a subtle shadow effect by drawing darker side edges
+    const shadowColor = 'rgba(0, 0, 0, 0.15)';
+    const shadowOffset = 2;
+    
+    // Left shadow edge
+    ctx.fillStyle = shadowColor;
+    ctx.beginPath();
+    ctx.moveTo(x, y - liftHeight);
+    ctx.lineTo(x, y); // Ground point
+    ctx.lineTo(x + ISO_TILE_WIDTH / 2, y + ISO_TILE_HEIGHT / 2); // Bottom-left of diamond
+    ctx.lineTo(x + ISO_TILE_WIDTH / 2, y - ISO_TILE_HEIGHT / 2 - liftHeight); // Top-left of elevated tile
+    ctx.closePath();
+    ctx.fill();
+    
+    // Right shadow edge
+    ctx.beginPath();
+    ctx.moveTo(x + ISO_TILE_WIDTH, y - liftHeight);
+    ctx.lineTo(x + ISO_TILE_WIDTH, y); // Ground point
+    ctx.lineTo(x + ISO_TILE_WIDTH / 2, y + ISO_TILE_HEIGHT / 2); // Bottom-right of diamond
+    ctx.lineTo(x + ISO_TILE_WIDTH / 2, y - ISO_TILE_HEIGHT / 2 - liftHeight); // Top-right of elevated tile
+    ctx.closePath();
+    ctx.fill();
+  }
   
   // Draw top face (offset upward by liftHeight for lifted tiles)
   ctx.fillStyle = color;
