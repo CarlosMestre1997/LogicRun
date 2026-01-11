@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <title>Startie – Level 7</title>
 <link rel="stylesheet" href="../style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div id="top-banner">
@@ -65,7 +66,8 @@ import { drawLevel, initRenderer } from '../render/index.js';
 import { level7 } from './level7.js';
 import { animateCelebration } from '../render/animations.js';
 import { initSounds, loadSoundPreference, toggleSound, isSoundEnabled, playBackgroundMusic, saveMusicPosition } from '../utils/sounds.js';
-import { getCumulativeLeaderboard, addToRunTotal } from '../utils/leaderboard.js';
+import { initSupabase } from '../utils/supabase.js';
+import { getCumulativeLeaderboard, addToRunTotal } from '../utils/leaderboard-supabase.js';
 
 const level = level7;
 const canvas = document.getElementById('canvas');
@@ -190,9 +192,12 @@ initRenderer(() => {
 }, level);
 drawLevel(ctx, level, engine.state);
 
+// Initialize Supabase
+initSupabase();
+
 // Initialize highscores panel
-function updateHighscoresPanel() {
-  const leaderboard = getCumulativeLeaderboard();
+async function updateHighscoresPanel() {
+  const leaderboard = await getCumulativeLeaderboard();
   const highscoresList = document.getElementById('highscores-list');
   highscoresList.innerHTML = '';
   
