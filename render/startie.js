@@ -14,9 +14,17 @@ const TOTAL_SPRITES = SPRITE_VARIANTS.length;
 function loadSpriteSet(spriteSet, prefix, onLoad) {
   SPRITE_VARIANTS.forEach(key => {
     const img = spriteSet[key];
-    img.src = getAssetPath(`${prefix}-${key}.png`);
     img.onload = () => onLoad(key);
-    if (img.complete) onLoad(key);
+    img.onerror = () => {
+      console.error(`Failed to load sprite: ${prefix}-${key}.png`);
+      onLoad(key); // Count as loaded even on error to avoid blocking
+    };
+    // Set src after setting up handlers
+    img.src = getAssetPath(`${prefix}-${key}.png`);
+    // Check if already cached/loaded (must check after setting src)
+    if (img.complete && img.naturalWidth > 0) {
+      onLoad(key);
+    }
   });
 }
 
