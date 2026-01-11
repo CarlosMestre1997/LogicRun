@@ -1,5 +1,5 @@
 // Game rules: collisions, win/lose conditions
-import { isGoal, getTile } from '../levels/helpers.js';
+import { isGoal, getTile, getTileHeight } from '../levels/helpers.js';
 
 export function checkWinCondition(state, level) {
   // Check if player is at goal position
@@ -8,7 +8,13 @@ export function checkWinCondition(state, level) {
   }
   
   // Check if goal is elevated - player must be at correct height
-  const goalHeight = level.goal.height || 0;
+  // First check if level.goal has a height property (for elevated goals defined separately)
+  let goalHeight = level.goal.height;
+  // If not, check the tile's height property (for goal tiles with height in the tiles array)
+  if (goalHeight === undefined) {
+    goalHeight = getTileHeight(level, level.goal.x, level.goal.y);
+  }
+  
   if (goalHeight > 0 && state.z !== goalHeight) {
     return false; // Player is at goal position but not at correct height
   }

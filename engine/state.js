@@ -10,7 +10,8 @@ export function createState() {
     ghostVisible: false,
     ghostY: undefined, // for ghost animation only
     stepCount: 0,
-    hasLaptop: false // track if player has picked up laptop
+    hasLaptop: false, // track if player has picked up laptop
+    visitedGoals: new Set() // track visited goals for levels with multiple goals
   };
 }
 
@@ -25,6 +26,7 @@ export function resetState(state) {
   state.ghostY = undefined;
   state.stepCount = 0;
   state.hasLaptop = false;
+  state.visitedGoals = new Set();
 }
 
 // Direction vectors

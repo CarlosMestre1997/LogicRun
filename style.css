@@ -65,7 +65,7 @@ body {
   display: flex;
   height: calc(100vh - 120px);
   overflow: hidden;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   width: 100%;
 }
@@ -373,4 +373,45 @@ canvas {
   margin-top: 0.5rem;
   min-height: 1.5rem;
   font-family: 'Courier New', monospace;
+}
+
+/* Highscores Panel */
+#highscores-panel {
+  flex: 0 0 200px;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  background: var(--ui-gray);
+  border-left: 2px solid #555;
+  overflow-y: auto;
+}
+
+#highscores-panel h2 {
+  color: var(--white);
+  font-family: 'Courier New', monospace;
+  font-size: 1rem;
+  margin: 0 0 1rem 0;
+  text-align: center;
+}
+
+#highscores-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.highscore-entry {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: var(--white);
+}
+
+.highscore-code {
+  color: var(--white);
+}
+
+.highscore-score {
+  color: var(--pink);
 }

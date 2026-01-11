@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Startie – Level 7</title>
+<title>Startie – Level 5</title>
 <link rel="stylesheet" href="../style.css">
 </head>
 <body>
@@ -23,17 +23,25 @@
   
   <div id="ui">
     <div id="ui-header">
-      <strong>Level 7</strong>
+      <strong>Level 5</strong> <span style="font-size: 14px; color: #888; margin-left: 10px;">pass: HCK</span>
       <div style="display: flex; align-items: center;">
         <span id="score">SCORE: 1000</span>
         <button id="sound-toggle" title="Toggle Sound">🔊</button>
       </div>
     </div>
     <div id="terminal-container">
-      <textarea id="terminal" spellcheck="false">> move()</textarea>
+      <textarea id="terminal" spellcheck="false">> move(3)
+> while(hacking) {
+> jump()
+> }</textarea>
     </div>
     <button id="run">Run</button>
     <div id="status"></div>
+  </div>
+  
+  <div id="highscores-panel">
+    <h2>HIGHSCORES</h2>
+    <div id="highscores-list"></div>
   </div>
 </div>
 
@@ -57,11 +65,12 @@
 <script type="module">
 import { createEngine, calculateScore, countCommands } from '../engine/index.js';
 import { drawLevel, initRenderer } from '../render/index.js';
-import { level7 } from './level7.js';
+import { level5 } from './level5.js';
 import { animateCelebration } from '../render/animations.js';
 import { initSounds, loadSoundPreference, toggleSound, isSoundEnabled, playBackgroundMusic, saveMusicPosition } from '../utils/sounds.js';
+import { getCumulativeLeaderboard, addToRunTotal } from '../utils/leaderboard.js';
 
-const level = level7;
+const level = level5;
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const engine = createEngine(level);
@@ -184,6 +193,30 @@ initRenderer(() => {
 }, level);
 drawLevel(ctx, level, engine.state);
 
+// Initialize highscores panel
+function updateHighscoresPanel() {
+  const leaderboard = getCumulativeLeaderboard();
+  const highscoresList = document.getElementById('highscores-list');
+  highscoresList.innerHTML = '';
+  
+  if (leaderboard.length === 0) {
+    highscoresList.innerHTML = '<div style="color: #888; font-size: 0.8rem; text-align: center; padding: 1rem;">No scores yet</div>';
+    return;
+  }
+  
+  leaderboard.forEach((entry) => {
+    const entryDiv = document.createElement('div');
+    entryDiv.className = 'highscore-entry';
+    entryDiv.innerHTML = `
+      <span class="highscore-code">${entry.code}</span>
+      <span class="highscore-score">${entry.score.toLocaleString()}</span>
+    `;
+    highscoresList.appendChild(entryDiv);
+  });
+}
+
+updateHighscoresPanel();
+
 const runButton = document.getElementById('run');
 let isRunning = false;
 
@@ -218,17 +251,23 @@ runButton.onclick = () => {
     
     if (s.failed) {
       status.textContent = 'Game Over — Try Again';
-    } else if (s.x === level.goal.x && s.y === level.goal.y) {
+    } else if (s.x === level.goal.x && s.y === level.goal.y && s.hasLaptop) {
       const commandCount = countCommands(result.actions);
       const score = calculateScore(commandCount);
       scoreDisplay.textContent = `SCORE: ${score}`;
+      
+      // Add to cumulative run total
+      addToRunTotal(score);
+      
       status.textContent = '✓ Level Complete';
       
       // Disable button during celebration
       runButton.disabled = true;
       animateCelebration(s, (state) => drawLevel(ctx, level, state), 1500);
       saveMusicPosition(); // Save position before navigation
-      setTimeout(() => window.location.href = '../index.html', 2000);
+      setTimeout(() => window.location.href = 'PTN.html', 2000);
+    } else if (s.x === level.goal.x && s.y === level.goal.y && !s.hasLaptop) {
+      status.textContent = 'You need the laptop to complete this level!';
     } else {
       status.textContent = 'Try again';
     }
@@ -248,26 +287,27 @@ document.getElementById('home-btn').onclick = () => {
 
 document.getElementById('prev-btn').onclick = () => {
   saveMusicPosition();
-  window.location.href = 'level6.html';
+  window.location.href = 'HGT.html';
 };
 
 document.getElementById('password-btn').onclick = () => {
   document.getElementById('password-modal').style.display = 'block';
 };
 
-// Password system - includes all levels
+// Password system
 const passwordModal = document.getElementById('password-modal');
 const closeBtn = document.querySelector('.close');
 const passwordSubmit = document.getElementById('password-submit');
 
 const passwords = {
-  'level1': 'level1.html',
-  'level2': 'level2.html',
-  'level3': 'level3.html',
-  'level4': 'level4.html',
-  'level5': 'level5.html',
-  'level6': 'level6.html',
-  'level7': 'level7.html'
+  'mve': 'MVE.html',
+  'jmp': 'JMP.html',
+  'spn': 'SPN.html',
+  'hgt': 'HGT.html',
+  'hck': 'HCK.html',
+  'ptn': 'PTN.html',
+  'sss': 'SSS.html',
+  'gls': 'GLS.html'
 };
 
 closeBtn.onclick = () => {

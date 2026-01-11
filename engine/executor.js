@@ -226,6 +226,25 @@ export function createExecutor(level) {
         draw(state);
       }
     }
+    
+    // Helper to check and track visited goals (for levels with multiple goals)
+    function checkGoalsVisited() {
+      if (level.goals && Array.isArray(level.goals)) {
+        level.goals.forEach(goal => {
+          if (state.x === goal.x && state.y === goal.y && state.z === 0) {
+            state.visitedGoals.add(`${goal.x},${goal.y}`);
+          }
+        });
+      }
+    }
+    
+    // Helper to check if all goals are visited (for levels with multiple goals)
+    function allGoalsVisited() {
+      if (level.goals && Array.isArray(level.goals)) {
+        return state.visitedGoals.size >= level.goals.length;
+      }
+      return false;
+    }
     currentOnFinish = onFinish; // Store for animateGhost to access
     state.queue = [...actions];
     state.failed = false;
@@ -240,6 +259,7 @@ export function createExecutor(level) {
     state.z = 0;
     state.facing = 'SE';
     state.hasLaptop = false;
+    state.visitedGoals = new Set();
     
     function processAction() {
       if (state.queue.length === 0) {
@@ -256,7 +276,7 @@ export function createExecutor(level) {
         const target = nextTile(state);
         
         // Check if this move will fail
-        // Also fail if trying to move onto a lifted tile (must jump to reach it)
+        // Fail if trying to move onto a lifted tile (must jump to reach it, regardless of current height)
         const willFail = !isValidPosition(level, target.x, target.y) || 
                         isHole(level, target.x, target.y) ||
                         isLiftedTile(level, target.x, target.y);
@@ -265,6 +285,10 @@ export function createExecutor(level) {
         const fromPos = { x: state.x, y: state.y };
         state.x = target.x;
         state.y = target.y;
+        // When moving to ground level, reset z to 0
+        if (!isLiftedTile(level, target.x, target.y)) {
+          state.z = 0;
+        }
         
         // QUEUE ANIMATION (visual interpolation)
         animationQueue.push(createAnimation(
@@ -277,6 +301,7 @@ export function createExecutor(level) {
               handleFall(draw);
             } else {
               checkLaptopPickup();
+              checkGoalsVisited();
               processAction();
             }
           }
@@ -336,6 +361,7 @@ export function createExecutor(level) {
               handleFall(draw);
             } else {
               checkLaptopPickup();
+              checkGoalsVisited();
               processAction();
             }
           }
@@ -355,7 +381,13 @@ export function createExecutor(level) {
             return;
           }
           
-          if (state.hasLaptop && !isGoal(level, state.x, state.y)) {
+          // For levels with multiple goals, continue until all are visited
+          // For single goal levels, continue until at goal
+          const shouldContinue = level.goals && Array.isArray(level.goals) 
+            ? !allGoalsVisited()
+            : !isGoal(level, state.x, state.y);
+            
+          if (state.hasLaptop && shouldContinue) {
             const bodyCopy = copyBodyActions(action.body);
             for (let i = bodyCopy.length - 1; i >= 0; i--) {
               state.queue.unshift(bodyCopy[i]);
@@ -377,7 +409,13 @@ export function createExecutor(level) {
         // This runs after while loop body completes - re-check the condition
         const originalAction = action.originalAction;
         if (originalAction.condition === 'hacking') {
-          if (state.hasLaptop && !isGoal(level, state.x, state.y)) {
+          // For levels with multiple goals, continue until all are visited
+          // For single goal levels, continue until at goal
+          const shouldContinue = level.goals && Array.isArray(level.goals) 
+            ? !allGoalsVisited()
+            : !isGoal(level, state.x, state.y);
+            
+          if (state.hasLaptop && shouldContinue) {
             const bodyCopy = copyBodyActions(originalAction.body);
             for (let i = bodyCopy.length - 1; i >= 0; i--) {
               state.queue.unshift(bodyCopy[i]);

@@ -52,7 +52,8 @@ export function drawStartie(ctx, state) {
   // Only use animation values if they're valid (not undefined/null)
   const displayX = (state.animX !== undefined && state.animX !== null) ? state.animX : state.x;
   const displayY = (state.animY !== undefined && state.animY !== null) ? state.animY : state.y;
-  const displayZ = (state.animZ !== undefined && state.animZ !== null) ? state.animZ : state.z;
+  // animZ is ONLY for jump animation (0-1 during jump), NOT for tile height
+  const jumpAnimationZ = (state.animZ !== undefined && state.animZ !== null) ? state.animZ : 0;
   
   // Convert grid coordinates to isometric screen coordinates
   // Use the same offset calculation as the grid
@@ -70,14 +71,13 @@ export function drawStartie(ctx, state) {
   const tileTopY = isoY - ISO_TILE_HEIGHT / 2;
   
   // Get tile height (for lifted tiles) - use state.z which stores lifted tile height
-  // For animation, we use displayZ which includes jump animation
   const tileHeight = state.z || 0; // state.z stores the lifted tile height (0 for ground, 1+ for lifted)
   
   // Apply height offset:
-  // - displayZ is for jump animation (0-1 during jump)
+  // - jumpAnimationZ is for jump animation (0-1 during jump, 0 when not jumping)
   // - tileHeight is for standing on a lifted tile (0 = ground, 1+ = lifted)
   // Match the reduced lift height multiplier from grid.js (1.2 instead of 2)
-  const jumpHeightOffset = (displayZ || 0) * ISO_TILE_HEIGHT * 2; // Jump animation (keep full height for jumps)
+  const jumpHeightOffset = jumpAnimationZ * ISO_TILE_HEIGHT * 2; // Jump animation (keep full height for jumps)
   const liftedOffset = tileHeight * ISO_TILE_HEIGHT * 1.2; // Lifted tile height (reduced for shorter appearance)
   
   const pixelX = isoX + ISO_TILE_WIDTH / 2;  // Center horizontally
