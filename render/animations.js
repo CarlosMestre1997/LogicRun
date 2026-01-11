@@ -16,6 +16,12 @@ export function loadCelebrateSprite(callback) {
     if (callback) callback();
   };
   celebrateSprite.src = getAssetPath('celebrate.png');
+  
+  // Check if image is cached (onload won't fire for cached images)
+  if (celebrateSprite.complete && celebrateSprite.naturalWidth > 0) {
+    celebrateLoaded = true;
+    if (callback) callback();
+  }
 }
 
 export function isCelebrateLoaded() {

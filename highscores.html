@@ -47,8 +47,35 @@ import { initSupabase } from './utils/supabase.js';
 import { getCumulativeLeaderboard, saveCumulativeScore, getCurrentRunTotal, resetRunTotal } from './utils/leaderboard-supabase.js';
 import { saveMusicPosition } from './utils/sounds.js';
 
+// Wait for Supabase script to load, then initialize
+function waitForSupabase() {
+  return new Promise((resolve) => {
+    if (typeof window.supabase !== 'undefined') {
+      initSupabase();
+      resolve();
+    } else {
+      // Check every 100ms for Supabase to load
+      const checkInterval = setInterval(() => {
+        if (typeof window.supabase !== 'undefined') {
+          clearInterval(checkInterval);
+          initSupabase();
+          resolve();
+        }
+      }, 100);
+      
+      // Timeout after 5 seconds
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        console.warn('Supabase script did not load within 5 seconds');
+        initSupabase(); // Try anyway
+        resolve();
+      }, 5000);
+    }
+  });
+}
+
 // Initialize Supabase when page loads
-initSupabase();
+waitForSupabase();
 
 const scoreEntry = document.getElementById('score-entry');
 const playerCodeInput = document.getElementById('player-code');
@@ -91,7 +118,8 @@ async function updateLeaderboard() {
 }
 
 // Submit score (now async)
-submitScoreBtn.onclick = async () => {
+submitScoreBtn.onclick = async (e) => {
+  e.preventDefault(); // Prevent any default behavior
   const code = playerCodeInput.value.trim().toUpperCase();
   codeError.textContent = '';
   
@@ -110,13 +138,22 @@ submitScoreBtn.onclick = async () => {
   submitScoreBtn.textContent = 'Submitting...';
   
   try {
-    await saveCumulativeScore(code, totalScore);
+    console.log('Submitting score:', code, totalScore);
+    const result = await saveCumulativeScore(code, totalScore);
+    console.log('Score submitted successfully:', result);
     resetRunTotal();
     scoreEntry.style.display = 'none';
     await updateLeaderboard();
+    // Show success message briefly
+    codeError.style.color = '#4caf50';
+    codeError.textContent = 'Score submitted successfully!';
+    setTimeout(() => {
+      codeError.textContent = '';
+      codeError.style.color = '#ff4444';
+    }, 2000);
   } catch (error) {
     console.error('Error submitting score:', error);
-    codeError.textContent = 'Error submitting score. Please try again.';
+    codeError.textContent = `Error submitting score: ${error.message || 'Please try again.'}`;
   } finally {
     submitScoreBtn.disabled = false;
     submitScoreBtn.textContent = 'Submit';
