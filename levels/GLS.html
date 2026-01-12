@@ -18,6 +18,15 @@
   </div>
 </div>
 
+<!-- Mobile Header -->
+<div id="mobile-header">
+  <div id="mobile-nav-buttons">
+    <button id="mobile-home-btn" class="mobile-nav-btn home" title="Home"></button>
+    <button id="mobile-prev-btn" class="mobile-nav-btn prev" title="Previous Level"></button>
+    <button id="mobile-password-btn" class="mobile-nav-btn password" title="Enter Password">*</button>
+  </div>
+</div>
+
 <div id="game-container">
   <div id="game">
     <canvas id="canvas" width="600" height="300"></canvas>
@@ -36,6 +45,7 @@
 > while(hacking) {
 > move()
 > }</textarea>
+      <div id="terminal-drop-zone" class="empty"></div>
     </div>
     <button id="run">Run</button>
     <div id="status"></div>
@@ -51,6 +61,14 @@
   <button id="home-btn" class="nav-btn" title="Home"></button>
   <button id="prev-btn" class="nav-btn" title="Previous Level"></button>
   <button id="password-btn" class="nav-btn" title="Enter Password">*</button>
+</div>
+
+<!-- Mobile Command Palette -->
+<div id="command-palette">
+  <button class="command-btn" draggable="true" data-command="move()">move()</button>
+  <button class="command-btn" draggable="true" data-command="spin(l)">spin(l)</button>
+  <button class="command-btn" draggable="true" data-command="spin(r)">spin(r)</button>
+  <button class="command-btn" draggable="true" data-command="jump()">jump()</button>
 </div>
 
 <!-- Password Modal -->
@@ -231,11 +249,25 @@ runButton.onclick = () => {
   
   status.textContent = '';
   
-  const lines = terminal.value.split('\n')
-    .map(line => line.trim().replace(/^>\s*/, ''))
-    .filter(text => text.length > 0);
+  // Check if mobile - use commands array, otherwise use terminal value
+  const isMobile = window.innerWidth <= 768 || ('ontouchstart' in window);
+  let commandText;
   
-  const result = engine.parse(lines.join('\n'));
+  if (isMobile && terminalDropZone) {
+    commandText = commands.join('\n');
+  } else {
+    const lines = terminal.value.split('\n')
+      .map(line => line.trim().replace(/^>\s*/, ''))
+      .filter(text => text.length > 0);
+    commandText = lines.join('\n');
+  }
+  
+  if (!commandText.trim()) {
+    status.textContent = 'No commands to execute';
+    return;
+  }
+  
+  const result = engine.parse(commandText);
   if (result.error) {
     status.textContent = result.error;
     return;
@@ -306,6 +338,203 @@ document.getElementById('prev-btn').onclick = () => {
 document.getElementById('password-btn').onclick = () => {
   document.getElementById('password-modal').style.display = 'block';
 };
+
+// Mobile navigation
+const mobileHomeBtn = document.getElementById('mobile-home-btn');
+const mobilePrevBtn = document.getElementById('mobile-prev-btn');
+const mobilePasswordBtn = document.getElementById('mobile-password-btn');
+
+if (mobileHomeBtn) {
+  mobileHomeBtn.onclick = () => {
+    saveMusicPosition();
+    window.location.href = '../index.html';
+  };
+}
+
+if (mobilePrevBtn) {
+  mobilePrevBtn.onclick = () => {
+    saveMusicPosition();
+    window.location.href = 'SSS.html';
+  };
+}
+
+if (mobilePasswordBtn) {
+  mobilePasswordBtn.onclick = () => {
+    document.getElementById('password-modal').style.display = 'block';
+  };
+}
+
+// Mobile drag-and-drop command interface
+const terminalDropZone = document.getElementById('terminal-drop-zone');
+let commands = []; // Array to store dropped commands
+
+// Check if mobile (touch device or small screen)
+const isMobileDevice = window.innerWidth <= 768 || ('ontouchstart' in window);
+
+function updateTerminalFromCommands() {
+  if (!isMobileDevice) return;
+  
+  // Update textarea with commands
+  if (terminal && commands.length > 0) {
+    terminal.value = commands.map(cmd => `> ${cmd}`).join('\n');
+  } else if (terminal) {
+    terminal.value = '';
+  }
+  
+  // Update drop zone display
+  if (terminalDropZone) {
+    terminalDropZone.classList.toggle('empty', commands.length === 0);
+    terminalDropZone.innerHTML = '';
+    
+    commands.forEach((cmd, index) => {
+      const chip = document.createElement('div');
+      chip.className = 'command-chip';
+      
+      // Parse command to extract base and parameter
+      const match = cmd.match(/^(\w+)\((\d*)\)$/);
+      const baseCmd = match ? match[1] : cmd.replace(/\(.*\)/, '');
+      const param = match ? match[2] : '';
+      
+      chip.innerHTML = `
+        <span class="command-text">${baseCmd}(</span>
+        <input type="text" class="command-param" value="${param}" data-index="${index}" inputmode="numeric" pattern="[0-9]*" maxlength="2">
+        <span class="command-text">)</span>
+        <button class="remove-btn" data-index="${index}">×</button>
+      `;
+      
+      const paramInput = chip.querySelector('.command-param');
+      const removeBtn = chip.querySelector('.remove-btn');
+      
+      // Update command when parameter changes
+      paramInput.addEventListener('input', (e) => {
+        const newParam = e.target.value.replace(/[^0-9]/g, ''); // Only allow numbers
+        e.target.value = newParam;
+        const newCmd = newParam ? `${baseCmd}(${newParam})` : `${baseCmd}()`;
+        commands[index] = newCmd;
+        updateTerminalFromCommands();
+        updateScoreMobile();
+      });
+      
+      paramInput.addEventListener('blur', () => {
+        // Ensure the command is valid on blur
+        const param = paramInput.value.replace(/[^0-9]/g, '');
+        const newCmd = param ? `${baseCmd}(${param})` : `${baseCmd}()`;
+        commands[index] = newCmd;
+        updateTerminalFromCommands();
+      });
+      
+      // Focus input when chip is tapped (but not when clicking remove button)
+      chip.addEventListener('click', (e) => {
+        if (e.target !== removeBtn && e.target !== paramInput) {
+          paramInput.focus();
+          // Select all text for easy replacement
+          setTimeout(() => paramInput.select(), 10);
+        }
+      });
+      
+      // Auto-select on focus for easy typing
+      paramInput.addEventListener('focus', () => {
+        paramInput.select();
+      });
+      
+      removeBtn.onclick = (e) => {
+        e.stopPropagation();
+        commands.splice(index, 1);
+        updateTerminalFromCommands();
+        updateScoreMobile();
+      };
+      
+      terminalDropZone.appendChild(chip);
+    });
+  }
+}
+
+function updateScoreMobile() {
+  if (!isMobileDevice) return;
+  
+  const text = commands.join('\n');
+  const lines = text.trim().split('\n').filter(l => l);
+  
+  if (lines.length === 0) {
+    scoreDisplay.textContent = 'SCORE: 1000';
+    return;
+  }
+  
+  const result = engine.parse(lines.join('\n'));
+  if (result.error || !result.actions) {
+    scoreDisplay.textContent = 'SCORE: 1000';
+    return;
+  }
+  
+  const commandCount = countCommands(result.actions);
+  const score = calculateScore(commandCount);
+  scoreDisplay.textContent = `SCORE: ${score}`;
+}
+
+// Command palette functionality for mobile (tap to add - primary method)
+if (isMobileDevice && terminalDropZone) {
+  const commandButtons = document.querySelectorAll('.command-btn');
+  
+  // Primary method: tap/click to add (works best on mobile)
+  commandButtons.forEach(btn => {
+    // Use click event (works for both mouse and touch)
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const command = btn.dataset.command;
+      if (command) {
+        commands.push(command);
+        updateTerminalFromCommands();
+        updateScoreMobile();
+        
+        // Visual feedback
+        btn.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+          btn.style.transform = '';
+        }, 150);
+      }
+    });
+    
+    // Prevent default touch behaviors that might interfere
+    btn.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+    }, { passive: true });
+    
+    // Also support drag-and-drop as fallback (for desktop/tablet)
+    btn.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', btn.dataset.command);
+      btn.classList.add('dragging');
+    });
+    
+    btn.addEventListener('dragend', (e) => {
+      btn.classList.remove('dragging');
+    });
+  });
+
+  // Drag and drop support (fallback for devices that support it)
+  terminalDropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    terminalDropZone.style.borderColor = '#0f0';
+  });
+
+  terminalDropZone.addEventListener('dragleave', (e) => {
+    terminalDropZone.style.borderColor = '#555';
+  });
+
+  terminalDropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    terminalDropZone.style.borderColor = '#555';
+    const command = e.dataTransfer.getData('text/plain');
+    if (command) {
+      commands.push(command);
+      updateTerminalFromCommands();
+      updateScoreMobile();
+    }
+  });
+
+  // Initialize
+  updateTerminalFromCommands();
+}
 
 // Password system - includes all levels
 const passwordModal = document.getElementById('password-modal');
