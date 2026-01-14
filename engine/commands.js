@@ -4,22 +4,16 @@ function parseCommand(line) {
   const moveMatch = line.match(/^move\((\d+)?\)$/);
   if (moveMatch) {
     const count = moveMatch[1] ? parseInt(moveMatch[1], 10) : 1;
-    const actions = [];
-    for (let j = 0; j < count; j++) {
-      actions.push({ type: 'move' });
-    }
-    return actions;
+    // Store as single action with count property for scoring
+    return [{ type: 'move', count: count }];
   }
   
   // Jump command: jump() or jump(3)
   const jumpMatch = line.match(/^jump\((\d+)?\)$/);
   if (jumpMatch) {
     const count = jumpMatch[1] ? parseInt(jumpMatch[1], 10) : 1;
-    const actions = [];
-    for (let j = 0; j < count; j++) {
-      actions.push({ type: 'jump' });
-    }
-    return actions;
+    // Store as single action with count property for scoring
+    return [{ type: 'jump', count: count }];
   }
   
   // Spin command: spin(r) or spin(l)

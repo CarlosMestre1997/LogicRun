@@ -87,7 +87,7 @@
     <div style="text-align: center; padding: 0px;">
       <img id="intro-celebrate-img" src="../assets/celebrate.png" alt="Startie" style="width: 400px; height: auto; image-rendering: pixelated;">
       <h2 style="color: var(--white); margin-bottom: 15px;">Hi, I'm Startie!</h2>
-      <p style="color: var(--white); font-size: 16px; line-height: 1.6;">Can you get me to the next level?</p>
+      <p style="color: var(--white); font-size: 16px; line-height: 1.6;">Can you get me to the next level?<br>Write code to move me around, the less commands you write, the higher your score!</p>
       <button id="intro-close" style="margin-top: 10px; padding: 10px 30px; font-size: 16px; cursor: pointer; background: #0f00ff; color: #ff6fb8; border: none; border-radius: 4px;">Let's Go!</button>
     </div>
   </div>
@@ -265,9 +265,9 @@ runButton.onclick = () => {
   if (isMobile && terminalDropZone) {
     commandText = commands.join('\n');
   } else {
-    const lines = terminal.value.split('\n')
-      .map(line => line.trim().replace(/^>\s*/, ''))
-      .filter(text => text.length > 0);
+  const lines = terminal.value.split('\n')
+    .map(line => line.trim().replace(/^>\s*/, ''))
+    .filter(text => text.length > 0);
     commandText = lines.join('\n');
   }
   
@@ -531,9 +531,11 @@ const passwords = {
   'spn': 'SPN.html',
   'hgt': 'HGT.html',
   'hck': 'HCK.html',
-  'ptn': 'PTN.html',
-  'sss': 'SSS.html',
-  'gls': 'GLS.html'
+  'ptn': 'SSS.html',
+  'sss': 'PTN.html',
+  'gls': 'GLS.html',
+  'lop': 'LOP.html',
+  'fin': 'FIN.html'
 };
 
 closeBtn.onclick = () => {

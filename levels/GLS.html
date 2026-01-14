@@ -309,7 +309,7 @@ runButton.onclick = () => {
       runButton.disabled = true;
       animateCelebration(s, (state) => drawLevel(ctx, level, state), 1500);
       saveMusicPosition(); // Save position before navigation
-      setTimeout(() => window.location.href = `../highscores.html?score=${totalScore}`, 2000);
+      setTimeout(() => window.location.href = 'LOP.html', 2000);
     } else if (level.goals && level.goals.length === s.visitedGoals.size && !s.hasLaptop) {
       status.textContent = 'You need the laptop to complete this level!';
     } else if (level.goals && s.visitedGoals.size > 0) {
@@ -732,9 +732,11 @@ const passwords = {
   'spn': 'SPN.html',
   'hgt': 'HGT.html',
   'hck': 'HCK.html',
-  'ptn': 'PTN.html',
-  'sss': 'SSS.html',
-  'gls': 'GLS.html'
+  'ptn': 'SSS.html',
+  'sss': 'PTN.html',
+  'gls': 'GLS.html',
+  'lop': 'LOP.html',
+  'fin': 'FIN.html'
 };
 
 closeBtn.onclick = () => {

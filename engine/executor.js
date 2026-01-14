@@ -256,7 +256,31 @@ export function createExecutor(level) {
       return false;
     }
     currentOnFinish = onFinish; // Store for animateGhost to access
-    state.queue = [...actions];
+    // Expand actions with count property into individual actions for execution
+    state.queue = [];
+    for (const action of actions) {
+      if (action.count && (action.type === 'move' || action.type === 'jump')) {
+        // Expand grouped move/jump commands into individual actions for execution
+        for (let i = 0; i < action.count; i++) {
+          state.queue.push({ type: action.type });
+        }
+      } else if (action.type === 'while') {
+        // Recursively expand while loop body actions
+        const expandedBody = [];
+        for (const bodyAction of action.body) {
+          if (bodyAction.count && (bodyAction.type === 'move' || bodyAction.type === 'jump')) {
+            for (let i = 0; i < bodyAction.count; i++) {
+              expandedBody.push({ type: bodyAction.type });
+            }
+          } else {
+            expandedBody.push(bodyAction);
+          }
+        }
+        state.queue.push({ ...action, body: expandedBody });
+      } else {
+        state.queue.push(action);
+      }
+    }
     state.failed = false;
     state.ghostVisible = false;
     state.ghostY = undefined;

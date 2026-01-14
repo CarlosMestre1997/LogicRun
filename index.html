@@ -64,6 +64,23 @@
         width: 100%;
         max-width: 300px;
       }
+
+      /* Resize logo on mobile so nav fits on one line */
+      #logo-img {
+        max-height: 40px;
+        width: auto;
+      }
+
+      header {
+        padding: 16px;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      nav a {
+        margin-left: 16px;
+        font-size: 13px;
+      }
     }
 
     /* =====================
@@ -71,7 +88,7 @@
     ====================== */
 
     header {
-      padding: 32px;
+      padding: 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -322,14 +339,19 @@
   <section id="school">
     <h2>About StartSchool</h2>
     <p>
-      StartSchool is a modern coding and startup school focused on building
-      real thinking skills — not just teaching tools. Logic Run is the first step.
+      StartSchool is Latvia's 12-month full-time tech & business program for future founders and product builders. 
+      You'll master Full-stack Development or one of 5 other Tech Curriculums, learn how to turn ideas into companies, 
+      and work hands-on like in a real startup—so when you graduate, you're ready to launch. 
+      Logic Run is just the beginning of thinking like a programmer.
+    </p>
+    <p style="margin-top: 16px;">
+      <a href="https://www.startschool.org/" target="_blank" rel="noopener noreferrer" style="color: var(--pink); text-decoration: underline;">Learn more about StartSchool and apply →</a>
     </p>
   </section>
   
   <!-- FOOTER -->
   <footer>
-    © StartSchool™ — Carlos Mestre from batch 2     /2025. <img src="./assets/startie-ld.png" alt="Startie" id="startie-img">
+    © StartSchool™ —  made by Carlos Mestre from batch 2 - 2025. <img src="./assets/startie-ld.png" alt="Startie" id="startie-img">
   </footer>
 
 </body>

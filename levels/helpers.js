@@ -16,6 +16,12 @@ export function isGoal(level, x, y) {
   if (level.goal && level.goal.x === x && level.goal.y === y) {
     return true;
   }
+  // Check if in goals array (for multiple goals)
+  if (level.goals && Array.isArray(level.goals)) {
+    if (level.goals.some(goal => goal.x === x && goal.y === y)) {
+      return true;
+    }
+  }
   // Check if tile type is goal (ground-level goal)
   const tile = getTile(level, x, y);
   return tile.type === 'goal';
@@ -34,6 +40,13 @@ export function isLiftedTile(level, x, y) {
   if (level.goal && level.goal.x === x && level.goal.y === y && level.goal.height > 0) {
     return true;
   }
+  // Check if in goals array with height (for multiple elevated goals)
+  if (level.goals && Array.isArray(level.goals)) {
+    const goal = level.goals.find(g => g.x === x && g.y === y);
+    if (goal && goal.height > 0) {
+      return true;
+    }
+  }
   // Check if tile has height property
   const tile = getTile(level, x, y);
   return tile.type === 'lifted' || (tile.height !== undefined && tile.height > 0);
@@ -43,6 +56,13 @@ export function getTileHeight(level, x, y) {
   // Check if goal is elevated at this position
   if (level.goal && level.goal.x === x && level.goal.y === y && level.goal.height > 0) {
     return level.goal.height;
+  }
+  // Check if in goals array with height (for multiple elevated goals)
+  if (level.goals && Array.isArray(level.goals)) {
+    const goal = level.goals.find(g => g.x === x && g.y === y);
+    if (goal && goal.height > 0) {
+      return goal.height;
+    }
   }
   // Check if tile has height property
   const tile = getTile(level, x, y);
