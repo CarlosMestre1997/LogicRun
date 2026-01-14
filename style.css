@@ -669,6 +669,63 @@ canvas {
     color: #fff;
   }
 
+  /* While loop structure */
+  .command-while {
+    background: var(--dark-gray);
+    border: 2px solid #555;
+    border-radius: 4px;
+    margin: 0.25rem 0;
+    padding: 0.5rem;
+  }
+
+  .command-while .while-header {
+    background: #2a4a2a;
+    border-color: #0a5a0a;
+  }
+
+  .command-while .while-footer {
+    background: transparent;
+    border: none;
+    padding: 0.2rem 0.6rem;
+  }
+
+  .command-while-body {
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    padding-left: 1rem;
+    border: 1px dashed transparent;
+    border-left: 2px dashed #555;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-height: 2rem;
+    border-radius: 4px;
+    transition: background-color 0.2s, border-color 0.2s;
+  }
+
+  .command-while-body .command-chip {
+    margin-left: 0.5rem;
+  }
+
+  .add-to-while-btn {
+    background: transparent;
+    border: 1px dashed #555;
+    color: #888;
+    padding: 0.4rem 0.6rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  .add-to-while-btn:hover,
+  .add-to-while-btn:active {
+    border-color: var(--pink);
+    color: var(--pink);
+    background: rgba(255, 79, 163, 0.1);
+  }
 
   /* Command palette at bottom */
   #command-palette {

@@ -203,6 +203,9 @@ export function createExecutor(level) {
   }
   
   function execute(actions, draw, onFinish) {
+    // Check if any while loops are used (required for laptop pickup in levels with laptops)
+    const hasWhileLoop = actions.some(action => action.type === 'while');
+    
     // Stop all animations and clear queues before starting new execution
     stopAnimationLoop();
     if (ghostAnimationId) {
@@ -222,6 +225,13 @@ export function createExecutor(level) {
     // Helper to check and handle laptop pickup (needs access to draw parameter)
     function checkLaptopPickup() {
       if (isLaptop(level, state.x, state.y)) {
+        // In levels with laptops, require a while(hacking) loop to pick up the laptop
+        if (level.laptop !== undefined && !hasWhileLoop) {
+          // Cannot pick up laptop without using while(hacking)
+          state.failed = true;
+          onFinish(state);
+          return;
+        }
         state.hasLaptop = true;
         draw(state);
       }
