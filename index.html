@@ -94,7 +94,14 @@
       align-items: center;
     }
 
-    
+    .logo-link {
+      display: inline-block;
+      text-decoration: none;
+    }
+
+    .logo-link:hover {
+      opacity: 0.8;
+    }
 
     nav a {
       margin-left: 24px;
@@ -184,6 +191,12 @@
       padding: 14px 32px;
       font-weight: 700;
       border-radius: 4px;
+      transition: background-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .cta:hover {
+      background: #ff7fc0;
+      transform: translateY(-2px);
     }
 
     .cta.secondary {
@@ -191,6 +204,12 @@
       color: var(--black);
       border: 1px solid #333;
       margin-left: 16px;
+      transition: background-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .cta.secondary:hover {
+      background: #1a5fff;
+      transform: translateY(-2px);
     }
 
     /* =====================
@@ -279,7 +298,9 @@
 
   <!-- HEADER -->
   <header>
-    <div class="logo"><img src="./assets/logoss.png" alt="StartSchool" id="logo-img"></div>
+    <a href="https://www.startschool.org/" target="_blank" rel="noopener noreferrer" class="logo-link">
+      <div class="logo"><img src="./assets/logoss.png" alt="StartSchool" id="logo-img"></div>
+    </a>
     <nav>
       <a href="#about">About</a>
       <a href="#game">The Game</a>
