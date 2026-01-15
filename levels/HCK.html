@@ -404,55 +404,74 @@ function updateTerminalFromCommands() {
         const chip = document.createElement('div');
         chip.className = 'command-chip';
         
-        // Parse command to extract base and parameter
-        const match = cmd.match(/^(\w+)\((\d*)\)$/);
-        const baseCmd = match ? match[1] : cmd.replace(/\(.*\)/, '');
-        const param = match ? match[2] : '';
+        // Check if command is spin(l) or spin(r) - these don't need parameter input
+        const isSpinDirection = cmd === 'spin(l)' || cmd === 'spin(r)';
         
-        chip.innerHTML = `
-          <span class="command-text">${baseCmd}(</span>
-          <input type="text" class="command-param" value="${param}" data-index="${cmdIndex}" inputmode="numeric" pattern="[0-9]*" maxlength="2">
-          <span class="command-text">)</span>
-          <button class="remove-btn" data-index="${cmdIndex}">×</button>
-        `;
-        
-        const paramInput = chip.querySelector('.command-param');
-        const removeBtn = chip.querySelector('.remove-btn');
-        
-        // Update command when parameter changes
-        paramInput.addEventListener('input', (e) => {
-          const newParam = e.target.value.replace(/[^0-9]/g, ''); // Only allow numbers
-          e.target.value = newParam;
-          const newCmd = newParam ? `${baseCmd}(${newParam})` : `${baseCmd}()`;
-          commands[cmdIndex] = newCmd;
-          updateTerminalFromCommands();
-          updateScoreMobile();
-        });
-        
-        paramInput.addEventListener('blur', () => {
-          const param = paramInput.value.replace(/[^0-9]/g, '');
-          const newCmd = param ? `${baseCmd}(${param})` : `${baseCmd}()`;
-          commands[cmdIndex] = newCmd;
-          updateTerminalFromCommands();
-        });
-        
-        chip.addEventListener('click', (e) => {
-          if (e.target !== removeBtn && e.target !== paramInput) {
-            paramInput.focus();
-            setTimeout(() => paramInput.select(), 10);
-          }
-        });
-        
-        paramInput.addEventListener('focus', () => {
-          paramInput.select();
-        });
-        
-        removeBtn.onclick = (e) => {
-          e.stopPropagation();
-          commands.splice(cmdIndex, 1);
-          updateTerminalFromCommands();
-          updateScoreMobile();
-        };
+        if (isSpinDirection) {
+          // Render spin(l) or spin(r) without parameter input
+          chip.innerHTML = `
+            <span class="command-text">${cmd}</span>
+            <button class="remove-btn" data-index="${cmdIndex}">×</button>
+          `;
+          
+          const removeBtn = chip.querySelector('.remove-btn');
+          removeBtn.onclick = (e) => {
+            e.stopPropagation();
+            commands.splice(cmdIndex, 1);
+            updateTerminalFromCommands();
+            updateScoreMobile();
+          };
+        } else {
+          // Parse command to extract base and parameter
+          const match = cmd.match(/^(\w+)\((\d*)\)$/);
+          const baseCmd = match ? match[1] : cmd.replace(/\(.*\)/, '');
+          const param = match ? match[2] : '';
+          
+          chip.innerHTML = `
+            <span class="command-text">${baseCmd}(</span>
+            <input type="text" class="command-param" value="${param}" data-index="${cmdIndex}" inputmode="numeric" pattern="[0-9]*" maxlength="2">
+            <span class="command-text">)</span>
+            <button class="remove-btn" data-index="${cmdIndex}">×</button>
+          `;
+          
+          const paramInput = chip.querySelector('.command-param');
+          const removeBtn = chip.querySelector('.remove-btn');
+          
+          // Update command when parameter changes
+          paramInput.addEventListener('input', (e) => {
+            const newParam = e.target.value.replace(/[^0-9]/g, ''); // Only allow numbers
+            e.target.value = newParam;
+            const newCmd = newParam ? `${baseCmd}(${newParam})` : `${baseCmd}()`;
+            commands[cmdIndex] = newCmd;
+            updateTerminalFromCommands();
+            updateScoreMobile();
+          });
+          
+          paramInput.addEventListener('blur', () => {
+            const param = paramInput.value.replace(/[^0-9]/g, '');
+            const newCmd = param ? `${baseCmd}(${param})` : `${baseCmd}()`;
+            commands[cmdIndex] = newCmd;
+            updateTerminalFromCommands();
+          });
+          
+          chip.addEventListener('click', (e) => {
+            if (e.target !== removeBtn && e.target !== paramInput) {
+              paramInput.focus();
+              setTimeout(() => paramInput.select(), 10);
+            }
+          });
+          
+          paramInput.addEventListener('focus', () => {
+            paramInput.select();
+          });
+          
+          removeBtn.onclick = (e) => {
+            e.stopPropagation();
+            commands.splice(cmdIndex, 1);
+            updateTerminalFromCommands();
+            updateScoreMobile();
+          };
+        }
         
         terminalDropZone.appendChild(chip);
       } else if (cmd.type === 'while') {
@@ -475,53 +494,72 @@ function updateTerminalFromCommands() {
           const chip = document.createElement('div');
           chip.className = 'command-chip';
           
-          const match = bodyCmd.match(/^(\w+)\((\d*)\)$/);
-          const baseCmd = match ? match[1] : bodyCmd.replace(/\(.*\)/, '');
-          const param = match ? match[2] : '';
+          // Check if command is spin(l) or spin(r) - these don't need parameter input
+          const isSpinDirection = bodyCmd === 'spin(l)' || bodyCmd === 'spin(r)';
           
-          chip.innerHTML = `
-            <span class="command-text">${baseCmd}(</span>
-            <input type="text" class="command-param" value="${param}" data-cmd-index="${cmdIndex}" data-body-index="${bodyIndex}" inputmode="numeric" pattern="[0-9]*" maxlength="2">
-            <span class="command-text">)</span>
-            <button class="remove-btn" data-cmd-index="${cmdIndex}" data-body-index="${bodyIndex}">×</button>
-          `;
-          
-          const paramInput = chip.querySelector('.command-param');
-          const removeBtn = chip.querySelector('.remove-btn');
-          
-          paramInput.addEventListener('input', (e) => {
-            const newParam = e.target.value.replace(/[^0-9]/g, '');
-            e.target.value = newParam;
-            const newCmd = newParam ? `${baseCmd}(${newParam})` : `${baseCmd}()`;
-            commands[cmdIndex].body[bodyIndex] = newCmd;
-            updateTerminalFromCommands();
-            updateScoreMobile();
-          });
-          
-          paramInput.addEventListener('blur', () => {
-            const param = paramInput.value.replace(/[^0-9]/g, '');
-            const newCmd = param ? `${baseCmd}(${param})` : `${baseCmd}()`;
-            commands[cmdIndex].body[bodyIndex] = newCmd;
-            updateTerminalFromCommands();
-          });
-          
-          chip.addEventListener('click', (e) => {
-            if (e.target !== removeBtn && e.target !== paramInput) {
-              paramInput.focus();
-              setTimeout(() => paramInput.select(), 10);
-            }
-          });
-          
-          paramInput.addEventListener('focus', () => {
-            paramInput.select();
-          });
-          
-          removeBtn.onclick = (e) => {
-            e.stopPropagation();
-            commands[cmdIndex].body.splice(bodyIndex, 1);
-            updateTerminalFromCommands();
-            updateScoreMobile();
-          };
+          if (isSpinDirection) {
+            // Render spin(l) or spin(r) without parameter input
+            chip.innerHTML = `
+              <span class="command-text">${bodyCmd}</span>
+              <button class="remove-btn" data-cmd-index="${cmdIndex}" data-body-index="${bodyIndex}">×</button>
+            `;
+            
+            const removeBtn = chip.querySelector('.remove-btn');
+            removeBtn.onclick = (e) => {
+              e.stopPropagation();
+              commands[cmdIndex].body.splice(bodyIndex, 1);
+              updateTerminalFromCommands();
+              updateScoreMobile();
+            };
+          } else {
+            const match = bodyCmd.match(/^(\w+)\((\d*)\)$/);
+            const baseCmd = match ? match[1] : bodyCmd.replace(/\(.*\)/, '');
+            const param = match ? match[2] : '';
+            
+            chip.innerHTML = `
+              <span class="command-text">${baseCmd}(</span>
+              <input type="text" class="command-param" value="${param}" data-cmd-index="${cmdIndex}" data-body-index="${bodyIndex}" inputmode="numeric" pattern="[0-9]*" maxlength="2">
+              <span class="command-text">)</span>
+              <button class="remove-btn" data-cmd-index="${cmdIndex}" data-body-index="${bodyIndex}">×</button>
+            `;
+            
+            const paramInput = chip.querySelector('.command-param');
+            const removeBtn = chip.querySelector('.remove-btn');
+            
+            paramInput.addEventListener('input', (e) => {
+              const newParam = e.target.value.replace(/[^0-9]/g, '');
+              e.target.value = newParam;
+              const newCmd = newParam ? `${baseCmd}(${newParam})` : `${baseCmd}()`;
+              commands[cmdIndex].body[bodyIndex] = newCmd;
+              updateTerminalFromCommands();
+              updateScoreMobile();
+            });
+            
+            paramInput.addEventListener('blur', () => {
+              const param = paramInput.value.replace(/[^0-9]/g, '');
+              const newCmd = param ? `${baseCmd}(${param})` : `${baseCmd}()`;
+              commands[cmdIndex].body[bodyIndex] = newCmd;
+              updateTerminalFromCommands();
+            });
+            
+            chip.addEventListener('click', (e) => {
+              if (e.target !== removeBtn && e.target !== paramInput) {
+                paramInput.focus();
+                setTimeout(() => paramInput.select(), 10);
+              }
+            });
+            
+            paramInput.addEventListener('focus', () => {
+              paramInput.select();
+            });
+            
+            removeBtn.onclick = (e) => {
+              e.stopPropagation();
+              commands[cmdIndex].body.splice(bodyIndex, 1);
+              updateTerminalFromCommands();
+              updateScoreMobile();
+            };
+          }
           
           whileBody.appendChild(chip);
         });
