@@ -410,6 +410,8 @@ function updateTerminalFromCommands() {
       if (typeof cmd === 'string') {
         const chip = document.createElement('div');
         chip.className = 'command-chip';
+        chip.draggable = true;
+        chip.dataset.index = cmdIndex;
         
         // Check if command is spin(l) or spin(r) - these don't need parameter input
         const isSpinDirection = cmd === 'spin(l)' || cmd === 'spin(r)';
@@ -479,6 +481,121 @@ function updateTerminalFromCommands() {
             updateScoreMobile();
           };
         }
+        
+        // Drag handlers for reordering regular commands (HTML5)
+        chip.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', cmd);
+          e.dataTransfer.setData('index', cmdIndex.toString());
+          e.dataTransfer.setData('type', 'chip');
+          e.dataTransfer.setData('location', 'main');
+          chip.classList.add('dragging');
+        });
+        
+        chip.addEventListener('dragend', () => {
+          chip.classList.remove('dragging');
+          document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        });
+        
+        // Touch-based drag for mobile (main list chips)
+        let mainChipTouchStartY = 0;
+        let mainChipTouchStartX = 0;
+        let mainChipIsDragging = false;
+        
+        chip.addEventListener('touchstart', (e) => {
+          if (e.target.closest('.remove-btn') || e.target.closest('.command-param')) {
+            return;
+          }
+          mainChipTouchStartY = e.touches[0].clientY;
+          mainChipTouchStartX = e.touches[0].clientX;
+          mainChipIsDragging = false;
+        }, { passive: true });
+        
+        chip.addEventListener('touchmove', (e) => {
+          const touchY = e.touches[0].clientY;
+          const touchX = e.touches[0].clientX;
+          const deltaY = Math.abs(touchY - mainChipTouchStartY);
+          const deltaX = Math.abs(touchX - mainChipTouchStartX);
+          
+          if ((deltaY > 10 || deltaX > 10) && !mainChipIsDragging) {
+            mainChipIsDragging = true;
+            chip.classList.add('dragging');
+            if (e.cancelable) {
+              e.preventDefault();
+            }
+          }
+          
+          if (mainChipIsDragging) {
+            if (e.cancelable) {
+              e.preventDefault();
+            }
+            const chips = Array.from(terminalDropZone.querySelectorAll('.command-chip:not(.while-header):not(.while-footer)'));
+            let targetChip = null;
+            
+            chips.forEach((c) => {
+              if (c === chip || c.closest('.command-while-body')) return;
+              const cRect = c.getBoundingClientRect();
+              if (touchY >= cRect.top && touchY <= cRect.bottom) {
+                targetChip = c;
+              }
+            });
+            
+            chips.forEach(c => c.classList.remove('drag-over'));
+            if (targetChip) {
+              targetChip.classList.add('drag-over');
+            }
+            
+            document.querySelectorAll('.command-while-body').forEach(wb => {
+              const rect = wb.getBoundingClientRect();
+              if (touchY >= rect.top && touchY <= rect.bottom) {
+                wb.classList.add('drag-over');
+              } else {
+                wb.classList.remove('drag-over');
+              }
+            });
+          }
+        }, { passive: false });
+        
+        chip.addEventListener('touchend', (e) => {
+          if (!mainChipIsDragging) return;
+          
+          chip.classList.remove('dragging');
+          const touchY = e.changedTouches[0].clientY;
+          const targetWhileBody = document.elementFromPoint(e.changedTouches[0].clientX, touchY)?.closest('.command-while-body');
+          
+          if (targetWhileBody) {
+            const targetWhileContainer = targetWhileBody.closest('.command-while');
+            const targetCmdIndex = parseInt(targetWhileContainer.dataset.index);
+            const [moved] = commands.splice(cmdIndex, 1);
+            commands[targetCmdIndex].body.push(moved);
+            updateTerminalFromCommands();
+            updateScoreMobile();
+          } else {
+            const chips = Array.from(terminalDropZone.querySelectorAll('.command-chip:not(.while-header):not(.while-footer)'));
+            let targetIndex = -1;
+            
+            chips.forEach((c) => {
+              if (c === chip || c.closest('.command-while-body')) return;
+              const cRect = c.getBoundingClientRect();
+              if (touchY >= cRect.top && touchY <= cRect.bottom) {
+                targetIndex = parseInt(c.dataset.index || c.closest('.command-while')?.dataset.index || '0');
+              }
+            });
+            
+            if (targetIndex >= 0 && targetIndex !== cmdIndex) {
+              const [moved] = commands.splice(cmdIndex, 1);
+              const insertIndex = targetIndex > cmdIndex ? targetIndex - 1 : targetIndex;
+              commands.splice(insertIndex, 0, moved);
+              updateTerminalFromCommands();
+              updateScoreMobile();
+            }
+          }
+          
+          document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+          mainChipIsDragging = false;
+          if (e.cancelable) {
+            e.preventDefault();
+          }
+        }, { passive: false });
         
         terminalDropZone.appendChild(chip);
       } else if (cmd.type === 'while') {
@@ -568,10 +685,134 @@ function updateTerminalFromCommands() {
             };
           }
           
-          whileBody.appendChild(chip);
-        });
-        
-        const whileFooter = document.createElement('div');
+            // Drag handlers for reordering within while loop body (HTML5)
+            chip.addEventListener('dragstart', (e) => {
+              e.stopPropagation();
+              e.dataTransfer.setData('text/plain', bodyCmd);
+              e.dataTransfer.setData('cmd-index', cmdIndex.toString());
+              e.dataTransfer.setData('body-index', bodyIndex.toString());
+              e.dataTransfer.setData('type', 'chip');
+              e.dataTransfer.setData('location', 'while-body');
+              chip.classList.add('dragging');
+            });
+            
+            chip.addEventListener('dragend', () => {
+              chip.classList.remove('dragging');
+              document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+              document.querySelectorAll('.command-while-body').forEach(el => {
+                el.style.borderColor = '';
+                el.style.backgroundColor = '';
+              });
+            });
+            
+            // Touch-based drag for mobile (while loop body chips)
+            let whileChipTouchStartY = 0;
+            let whileChipTouchStartX = 0;
+            let whileChipIsDragging = false;
+            
+            chip.addEventListener('touchstart', (e) => {
+              if (e.target.closest('.remove-btn') || e.target.closest('.command-param')) {
+                return;
+              }
+              whileChipTouchStartY = e.touches[0].clientY;
+              whileChipTouchStartX = e.touches[0].clientX;
+              whileChipIsDragging = false;
+            }, { passive: true });
+            
+            chip.addEventListener('touchmove', (e) => {
+              const touchY = e.touches[0].clientY;
+              const touchX = e.touches[0].clientX;
+              const deltaY = Math.abs(touchY - whileChipTouchStartY);
+              const deltaX = Math.abs(touchX - whileChipTouchStartX);
+              
+              if ((deltaY > 10 || deltaX > 10) && !whileChipIsDragging) {
+                whileChipIsDragging = true;
+                chip.classList.add('dragging');
+                if (e.cancelable) {
+                  e.preventDefault();
+                }
+              }
+              
+              if (whileChipIsDragging) {
+                if (e.cancelable) {
+                  e.preventDefault();
+                }
+                const whileBody = e.target.closest('.command-while-body');
+                const chips = whileBody ? Array.from(whileBody.querySelectorAll('.command-chip[data-body-index]')) : [];
+                
+                chips.forEach(c => c.classList.remove('drag-over'));
+                chips.forEach((c) => {
+                  if (c === chip) return;
+                  const cRect = c.getBoundingClientRect();
+                  if (touchY >= cRect.top && touchY <= cRect.bottom) {
+                    c.classList.add('drag-over');
+                  }
+                });
+                
+                document.querySelectorAll('.command-while-body').forEach(wb => {
+                  const rect = wb.getBoundingClientRect();
+                  if (touchY >= rect.top && touchY <= rect.bottom) {
+                    wb.classList.add('drag-over');
+                  } else {
+                    wb.classList.remove('drag-over');
+                  }
+                });
+              }
+            }, { passive: false });
+            
+            chip.addEventListener('touchend', (e) => {
+              if (!whileChipIsDragging) return;
+              
+              chip.classList.remove('dragging');
+              const touchY = e.changedTouches[0].clientY;
+              const whileBody = e.target.closest('.command-while-body');
+              const targetWhileBody = document.elementFromPoint(e.changedTouches[0].clientX, touchY)?.closest('.command-while-body');
+              
+              if (targetWhileBody) {
+                const targetWhileContainer = targetWhileBody.closest('.command-while');
+                const targetCmdIndex = parseInt(targetWhileContainer.dataset.index);
+                
+                if (targetWhileBody === whileBody) {
+                  const chips = Array.from(whileBody.querySelectorAll('.command-chip[data-body-index]'));
+                  let targetIndex = commands[cmdIndex].body.length;
+                  
+                  chips.forEach((c) => {
+                    if (c === chip) return;
+                    const cRect = c.getBoundingClientRect();
+                    if (touchY >= cRect.top && touchY <= cRect.bottom) {
+                      targetIndex = parseInt(c.dataset.bodyIndex);
+                    }
+                  });
+                  
+                  if (targetIndex !== bodyIndex) {
+                    const [moved] = commands[cmdIndex].body.splice(bodyIndex, 1);
+                    const insertIndex = targetIndex > bodyIndex ? targetIndex - 1 : targetIndex;
+                    commands[cmdIndex].body.splice(insertIndex, 0, moved);
+                    updateTerminalFromCommands();
+                    updateScoreMobile();
+                  }
+                } else {
+                  const [moved] = commands[cmdIndex].body.splice(bodyIndex, 1);
+                  commands[targetCmdIndex].body.push(moved);
+                  updateTerminalFromCommands();
+                  updateScoreMobile();
+                }
+              }
+              
+              document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+              whileChipIsDragging = false;
+              if (e.cancelable) {
+                e.preventDefault();
+              }
+            }, { passive: false });
+            
+            chip.draggable = true;
+            chip.dataset.cmdIndex = cmdIndex;
+            chip.dataset.bodyIndex = bodyIndex;
+            whileBody.appendChild(chip);
+          });
+          
+          const whileFooter = document.createElement('div');
         whileFooter.className = 'command-chip while-footer';
         whileFooter.innerHTML = '<span class="command-text">}</span>';
         
@@ -653,12 +894,112 @@ if (isMobileDevice && terminalDropZone) {
       }
     });
     
-    // Prevent default touch behaviors that might interfere
+    // Touch-based drag from button for mobile
+    let btnTouchStartY = 0;
+    let btnTouchStartX = 0;
+    let btnIsDragging = false;
+    
     btn.addEventListener('touchstart', (e) => {
-      e.stopPropagation();
+      btnTouchStartY = e.touches[0].clientY;
+      btnTouchStartX = e.touches[0].clientX;
+      btnIsDragging = false;
     }, { passive: true });
     
-    // Also support drag-and-drop as fallback (for desktop/tablet)
+    btn.addEventListener('touchmove', (e) => {
+      const touchY = e.touches[0].clientY;
+      const touchX = e.touches[0].clientX;
+      const deltaY = Math.abs(touchY - btnTouchStartY);
+      const deltaX = Math.abs(touchX - btnTouchStartX);
+      
+      if ((deltaY > 10 || deltaX > 10) && !btnIsDragging) {
+        btnIsDragging = true;
+        btn.classList.add('dragging');
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+      }
+      
+      if (btnIsDragging) {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+        const whileBody = document.elementFromPoint(touchX, touchY)?.closest('.command-while-body');
+        const chip = document.elementFromPoint(touchX, touchY)?.closest('.command-chip:not(.while-header):not(.while-footer)');
+        
+        document.querySelectorAll('.command-chip').forEach(c => c.classList.remove('drag-over'));
+        document.querySelectorAll('.command-while-body').forEach(wb => {
+          wb.classList.remove('drag-over');
+          wb.style.borderColor = '';
+          wb.style.backgroundColor = '';
+        });
+        
+        if (whileBody) {
+          whileBody.classList.add('drag-over');
+          whileBody.style.borderColor = '#0f0';
+          whileBody.style.backgroundColor = 'rgba(0, 255, 0, 0.1)';
+          terminalDropZone.style.borderColor = '#555';
+        } else if (chip && !chip.closest('.command-while-body')) {
+          chip.classList.add('drag-over');
+          terminalDropZone.style.borderColor = '#0f0';
+        } else {
+          terminalDropZone.style.borderColor = '#555';
+        }
+      }
+    }, { passive: false });
+    
+    btn.addEventListener('touchend', (e) => {
+      if (btnIsDragging) {
+        btn.classList.remove('dragging');
+        const touchY = e.changedTouches[0].clientY;
+        const touchX = e.changedTouches[0].clientX;
+        const whileBody = document.elementFromPoint(touchX, touchY)?.closest('.command-while-body');
+        const chip = document.elementFromPoint(touchX, touchY)?.closest('.command-chip:not(.while-header):not(.while-footer)');
+        
+        const isWhile = btn.dataset.while === 'true';
+        const command = btn.dataset.command;
+        
+        if (whileBody && command && !isWhile) {
+          const whileContainer = whileBody.closest('.command-while');
+          const cmdIndex = parseInt(whileContainer.dataset.index);
+          commands[cmdIndex].body.push(command);
+          updateTerminalFromCommands();
+          updateScoreMobile();
+        } else if (chip && !chip.closest('.command-while-body')) {
+          let insertIndex = commands.length;
+          const chipIndex = parseInt(chip.dataset.index || chip.closest('.command-while')?.dataset.index || '0');
+          insertIndex = chipIndex;
+          
+          if (isWhile) {
+            commands.splice(insertIndex, 0, { type: 'while', condition: 'hacking', body: [] });
+          } else {
+            commands.splice(insertIndex, 0, command);
+          }
+          updateTerminalFromCommands();
+          updateScoreMobile();
+        } else {
+          if (isWhile) {
+            commands.push({ type: 'while', condition: 'hacking', body: [] });
+          } else {
+            commands.push(command);
+          }
+          updateTerminalFromCommands();
+          updateScoreMobile();
+        }
+        
+        terminalDropZone.style.borderColor = '#555';
+        document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        document.querySelectorAll('.command-while-body').forEach(wb => {
+          wb.style.borderColor = '';
+          wb.style.backgroundColor = '';
+        });
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+      }
+      btnIsDragging = false;
+    }, { passive: false });
+    
+    // Also support HTML5 drag-and-drop (for desktop/tablet)
     btn.addEventListener('dragstart', (e) => {
       e.dataTransfer.setData('text/plain', btn.dataset.command);
       e.dataTransfer.setData('isWhile', btn.dataset.while || 'false');
@@ -684,17 +1025,38 @@ if (isMobileDevice && terminalDropZone) {
     }
   });
   
-  // Allow dropping commands into while loops
+  // Allow dropping commands into while loops and reordering
   document.addEventListener('dragover', (e) => {
     if (!e.target.closest('#terminal-drop-zone')) return;
     
     e.preventDefault();
     const whileBody = e.target.closest('.command-while-body');
+    const chip = e.target.closest('.command-chip');
+    
     if (whileBody) {
+      // Highlight while loop body
+      document.querySelectorAll('.command-while-body').forEach(el => {
+        if (el !== whileBody) {
+          el.style.borderColor = '';
+          el.style.backgroundColor = '';
+        }
+      });
       whileBody.style.borderColor = '#0f0';
       whileBody.style.backgroundColor = 'rgba(0, 255, 0, 0.1)';
+      document.querySelectorAll('.command-chip').forEach(c => c.classList.remove('drag-over'));
+    } else if (chip && chip.dataset.index !== undefined) {
+      // Highlight command chip for reordering
+      document.querySelectorAll('.command-while-body').forEach(el => {
+        el.style.borderColor = '';
+        el.style.backgroundColor = '';
+      });
+      document.querySelectorAll('.command-chip').forEach(c => {
+        if (c !== chip) c.classList.remove('drag-over');
+      });
+      chip.classList.add('drag-over');
     } else {
       terminalDropZone.style.borderColor = '#0f0';
+      document.querySelectorAll('.command-chip').forEach(c => c.classList.remove('drag-over'));
     }
   });
   
@@ -705,6 +1067,7 @@ if (isMobileDevice && terminalDropZone) {
         el.style.borderColor = '';
         el.style.backgroundColor = '';
       });
+      document.querySelectorAll('.command-chip').forEach(c => c.classList.remove('drag-over'));
       terminalDropZone.style.borderColor = '#555';
     }
   });
@@ -716,18 +1079,95 @@ if (isMobileDevice && terminalDropZone) {
     e.preventDefault();
     const command = e.dataTransfer.getData('text/plain');
     const isWhile = e.dataTransfer.getData('isWhile') === 'true';
+    const dragType = e.dataTransfer.getData('type');
+    const dragLocation = e.dataTransfer.getData('location');
+    const dragIndex = e.dataTransfer.getData('index');
+    const dragCmdIndex = e.dataTransfer.getData('cmd-index');
+    const dragBodyIndex = e.dataTransfer.getData('body-index');
     
-    // Find the closest while body or use the drop zone
+    // Find the closest while body or command chip
     const whileBody = e.target.closest('.command-while-body');
+    const chip = e.target.closest('.command-chip');
     
     // Clean up visual feedback
     document.querySelectorAll('.command-while-body').forEach(el => {
       el.style.borderColor = '';
       el.style.backgroundColor = '';
     });
+    document.querySelectorAll('.command-chip').forEach(c => c.classList.remove('drag-over'));
     terminalDropZone.style.borderColor = '#555';
     
-    if (command) {
+    if (dragType === 'chip' && dragLocation) {
+      // Reordering: moving an existing chip
+      if (dragLocation === 'main' && dragIndex !== undefined) {
+        // Moving a regular command
+        const fromIndex = parseInt(dragIndex);
+        
+        if (whileBody) {
+          // Moving from main list to while loop body
+          const whileContainer = whileBody.closest('.command-while');
+          const cmdIndex = parseInt(whileContainer.dataset.index);
+          const bodyChip = e.target.closest('.command-chip[data-body-index]');
+          const toBodyIndex = bodyChip ? parseInt(bodyChip.dataset.bodyIndex) : commands[cmdIndex].body.length;
+          
+          if (commands[cmdIndex] && commands[cmdIndex].type === 'while') {
+            const [moved] = commands.splice(fromIndex, 1);
+            commands[cmdIndex].body.splice(toBodyIndex, 0, moved);
+            updateTerminalFromCommands();
+            updateScoreMobile();
+          }
+        } else if (chip && chip.dataset.index !== undefined) {
+          // Reordering within main list
+          const toIndex = parseInt(chip.dataset.index);
+          if (fromIndex !== toIndex && fromIndex >= 0 && toIndex >= 0) {
+            const [moved] = commands.splice(fromIndex, 1);
+            const insertIndex = toIndex > fromIndex ? toIndex - 1 : toIndex;
+            commands.splice(insertIndex, 0, moved);
+            updateTerminalFromCommands();
+            updateScoreMobile();
+          }
+        }
+      } else if (dragLocation === 'while-body' && dragCmdIndex !== undefined && dragBodyIndex !== undefined) {
+        // Moving a command within or out of while loop body
+        const fromCmdIndex = parseInt(dragCmdIndex);
+        const fromBodyIndex = parseInt(dragBodyIndex);
+        
+        if (whileBody) {
+          // Moving within while loop body or between while loops
+          const whileContainer = whileBody.closest('.command-while');
+          const toCmdIndex = parseInt(whileContainer.dataset.index);
+          const bodyChip = e.target.closest('.command-chip[data-body-index]');
+          const toBodyIndex = bodyChip ? parseInt(bodyChip.dataset.bodyIndex) : commands[toCmdIndex].body.length;
+          
+          if (commands[fromCmdIndex] && commands[fromCmdIndex].type === 'while') {
+            if (fromCmdIndex === toCmdIndex && fromBodyIndex !== toBodyIndex) {
+              // Reordering within same while loop
+              const [moved] = commands[fromCmdIndex].body.splice(fromBodyIndex, 1);
+              const insertIndex = toBodyIndex > fromBodyIndex ? toBodyIndex - 1 : toBodyIndex;
+              commands[fromCmdIndex].body.splice(insertIndex, 0, moved);
+              updateTerminalFromCommands();
+              updateScoreMobile();
+            } else if (fromCmdIndex !== toCmdIndex) {
+              // Moving between different while loops
+              const [moved] = commands[fromCmdIndex].body.splice(fromBodyIndex, 1);
+              commands[toCmdIndex].body.splice(toBodyIndex, 0, moved);
+              updateTerminalFromCommands();
+              updateScoreMobile();
+            }
+          }
+        } else if (chip && chip.dataset.index !== undefined) {
+          // Moving from while loop body to main list
+          const toIndex = parseInt(chip.dataset.index);
+          if (commands[fromCmdIndex] && commands[fromCmdIndex].type === 'while') {
+            const [moved] = commands[fromCmdIndex].body.splice(fromBodyIndex, 1);
+            commands.splice(toIndex, 0, moved);
+            updateTerminalFromCommands();
+            updateScoreMobile();
+          }
+        }
+      }
+    } else if (command) {
+      // Adding new command from button
       if (whileBody) {
         // Add to while loop body
         const whileContainer = whileBody.closest('.command-while');
@@ -737,7 +1177,9 @@ if (isMobileDevice && terminalDropZone) {
             // Can't nest while loops for now
             return;
           }
-          commands[cmdIndex].body.push(command);
+          const bodyChip = e.target.closest('.command-chip[data-body-index]');
+          const bodyIndex = bodyChip ? parseInt(bodyChip.dataset.bodyIndex) : commands[cmdIndex].body.length;
+          commands[cmdIndex].body.splice(bodyIndex, 0, command);
           updateTerminalFromCommands();
           updateScoreMobile();
         }
@@ -745,6 +1187,9 @@ if (isMobileDevice && terminalDropZone) {
         // Add to main command list
         if (isWhile) {
           commands.push({ type: 'while', condition: 'hacking', body: [] });
+        } else if (chip && chip.dataset.index !== undefined) {
+          const insertIndex = parseInt(chip.dataset.index);
+          commands.splice(insertIndex, 0, command);
         } else {
           commands.push(command);
         }

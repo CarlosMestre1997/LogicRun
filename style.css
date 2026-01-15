@@ -678,6 +678,21 @@ canvas {
     color: #fff;
   }
 
+  .command-chip.dragging {
+    opacity: 0.5;
+  }
+
+  .command-chip.drag-over {
+    border-color: var(--pink);
+    background: rgba(255, 95, 168, 0.1);
+  }
+
+  .command-while-body.drag-over,
+  .command-while-body[style*="border-color"] {
+    border-color: #0f0 !important;
+    background-color: rgba(0, 255, 0, 0.1) !important;
+  }
+
   /* While loop structure */
   .command-while {
     background: var(--dark-gray);

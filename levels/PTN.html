@@ -377,6 +377,8 @@ function updateTerminalFromCommands() {
     commands.forEach((cmd, index) => {
       const chip = document.createElement('div');
       chip.className = 'command-chip';
+      chip.draggable = true;
+      chip.dataset.index = index;
       
       // Check if command is spin(l) or spin(r) - these don't need parameter input
       const isSpinDirection = cmd === 'spin(l)' || cmd === 'spin(r)';
@@ -451,6 +453,110 @@ function updateTerminalFromCommands() {
         };
       }
       
+      // Drag handlers for reordering
+      chip.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', cmd);
+        e.dataTransfer.setData('index', index.toString());
+        e.dataTransfer.setData('type', 'chip');
+        chip.classList.add('dragging');
+      });
+      
+      chip.addEventListener('dragend', () => {
+        chip.classList.remove('dragging');
+        document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+      });
+      
+      // Touch-based drag for mobile
+      let touchStartY = 0;
+      let touchStartX = 0;
+      let touchStartIndex = -1;
+      let isDragging = false;
+      
+      chip.addEventListener('touchstart', (e) => {
+        if (e.target.closest('.remove-btn') || e.target.closest('.command-param')) {
+          return;
+        }
+        touchStartY = e.touches[0].clientY;
+        touchStartX = e.touches[0].clientX;
+        touchStartIndex = index;
+        isDragging = false;
+      }, { passive: true });
+      
+      chip.addEventListener('touchmove', (e) => {
+        if (touchStartIndex !== index) return;
+        
+        const touchY = e.touches[0].clientY;
+        const touchX = e.touches[0].clientX;
+        const deltaY = Math.abs(touchY - touchStartY);
+        const deltaX = Math.abs(touchX - touchStartX);
+        
+        if ((deltaY > 10 || deltaX > 10) && !isDragging) {
+          isDragging = true;
+          chip.classList.add('dragging');
+          if (e.cancelable) {
+            e.preventDefault();
+          }
+        }
+        
+        if (isDragging) {
+          if (e.cancelable) {
+            e.preventDefault();
+          }
+          const chips = Array.from(terminalDropZone.querySelectorAll('.command-chip'));
+          let targetChip = null;
+          
+          chips.forEach((c) => {
+            if (c === chip) return;
+            const cRect = c.getBoundingClientRect();
+            if (touchY >= cRect.top && touchY <= cRect.bottom) {
+              targetChip = c;
+            }
+          });
+          
+          chips.forEach(c => c.classList.remove('drag-over'));
+          if (targetChip) {
+            targetChip.classList.add('drag-over');
+          }
+        }
+      }, { passive: false });
+      
+      chip.addEventListener('touchend', (e) => {
+        if (!isDragging || touchStartIndex !== index) {
+          touchStartIndex = -1;
+          return;
+        }
+        
+        chip.classList.remove('dragging');
+        const touchY = e.changedTouches[0].clientY;
+        const chips = Array.from(terminalDropZone.querySelectorAll('.command-chip'));
+        
+        let targetIndex = -1;
+        chips.forEach((c) => {
+          if (c === chip) return;
+          const cRect = c.getBoundingClientRect();
+          if (touchY >= cRect.top && touchY <= cRect.bottom) {
+            targetIndex = parseInt(c.dataset.index);
+          }
+        });
+        
+        if (targetIndex >= 0 && targetIndex !== index) {
+          const [moved] = commands.splice(index, 1);
+          const insertIndex = targetIndex > index ? targetIndex - 1 : targetIndex;
+          commands.splice(insertIndex, 0, moved);
+          updateTerminalFromCommands();
+          updateScoreMobile();
+        }
+        
+        document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        isDragging = false;
+        touchStartIndex = -1;
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+      }, { passive: false });
+      
+      chip.draggable = true;
+      chip.dataset.index = index;
       terminalDropZone.appendChild(chip);
     });
   }
@@ -502,14 +608,91 @@ if (isMobileDevice && terminalDropZone) {
       }
     });
     
-    // Prevent default touch behaviors that might interfere
+    // Touch-based drag from button for mobile
+    let btnTouchStartY = 0;
+    let btnTouchStartX = 0;
+    let btnIsDragging = false;
+    
     btn.addEventListener('touchstart', (e) => {
-      e.stopPropagation();
+      btnTouchStartY = e.touches[0].clientY;
+      btnTouchStartX = e.touches[0].clientX;
+      btnIsDragging = false;
     }, { passive: true });
     
-    // Also support drag-and-drop as fallback (for desktop/tablet)
+    btn.addEventListener('touchmove', (e) => {
+      const touchY = e.touches[0].clientY;
+      const touchX = e.touches[0].clientX;
+      const deltaY = Math.abs(touchY - btnTouchStartY);
+      const deltaX = Math.abs(touchX - btnTouchStartX);
+      
+      if ((deltaY > 10 || deltaX > 10) && !btnIsDragging) {
+        btnIsDragging = true;
+        btn.classList.add('dragging');
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+      }
+      
+      if (btnIsDragging) {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+        const rect = terminalDropZone.getBoundingClientRect();
+        if (touchY >= rect.top && touchY <= rect.bottom) {
+          const chips = Array.from(terminalDropZone.querySelectorAll('.command-chip'));
+          chips.forEach(c => c.classList.remove('drag-over'));
+          
+          chips.forEach((c) => {
+            const cRect = c.getBoundingClientRect();
+            if (touchY >= cRect.top && touchY <= cRect.bottom) {
+              c.classList.add('drag-over');
+            }
+          });
+          
+          terminalDropZone.style.borderColor = '#0f0';
+        } else {
+          terminalDropZone.style.borderColor = '#555';
+          document.querySelectorAll('.command-chip').forEach(c => c.classList.remove('drag-over'));
+        }
+      }
+    }, { passive: false });
+    
+    btn.addEventListener('touchend', (e) => {
+      if (btnIsDragging) {
+        btn.classList.remove('dragging');
+        const touchY = e.changedTouches[0].clientY;
+        const rect = terminalDropZone.getBoundingClientRect();
+        
+        if (touchY >= rect.top && touchY <= rect.bottom) {
+          const chips = Array.from(terminalDropZone.querySelectorAll('.command-chip'));
+          let insertIndex = commands.length;
+          
+          chips.forEach((c) => {
+            const cRect = c.getBoundingClientRect();
+            if (touchY >= cRect.top && touchY <= cRect.bottom) {
+              insertIndex = parseInt(c.dataset.index);
+            }
+          });
+          
+          const command = btn.dataset.command;
+          commands.splice(insertIndex, 0, command);
+          updateTerminalFromCommands();
+          updateScoreMobile();
+        }
+        
+        terminalDropZone.style.borderColor = '#555';
+        document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+      }
+      btnIsDragging = false;
+    }, { passive: false });
+    
+    // Also support HTML5 drag-and-drop (for desktop/tablet)
     btn.addEventListener('dragstart', (e) => {
       e.dataTransfer.setData('text/plain', btn.dataset.command);
+      e.dataTransfer.setData('type', 'button');
       btn.classList.add('dragging');
     });
     
@@ -518,25 +701,68 @@ if (isMobileDevice && terminalDropZone) {
     });
   });
 
-  // Drag and drop support (fallback for devices that support it)
+  // Drag and drop support for reordering and adding commands
+  let dragOverIndex = -1;
+  
   terminalDropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
-    terminalDropZone.style.borderColor = '#0f0';
+    const chip = e.target.closest('.command-chip');
+    if (chip && chip.dataset.index !== undefined) {
+      const index = parseInt(chip.dataset.index);
+      if (dragOverIndex !== index) {
+        document.querySelectorAll('.command-chip').forEach(c => c.classList.remove('drag-over'));
+        chip.classList.add('drag-over');
+        dragOverIndex = index;
+      }
+    } else {
+      terminalDropZone.style.borderColor = '#0f0';
+    }
   });
 
   terminalDropZone.addEventListener('dragleave', (e) => {
-    terminalDropZone.style.borderColor = '#555';
+    if (!terminalDropZone.contains(e.relatedTarget)) {
+      terminalDropZone.style.borderColor = '#555';
+      document.querySelectorAll('.command-chip').forEach(c => c.classList.remove('drag-over'));
+      dragOverIndex = -1;
+    }
   });
 
   terminalDropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     terminalDropZone.style.borderColor = '#555';
+    document.querySelectorAll('.command-chip').forEach(c => c.classList.remove('drag-over'));
+    
     const command = e.dataTransfer.getData('text/plain');
-    if (command) {
-      commands.push(command);
+    const dragType = e.dataTransfer.getData('type');
+    const dragIndex = e.dataTransfer.getData('index');
+    
+    const chip = e.target.closest('.command-chip');
+    
+    if (dragType === 'chip' && dragIndex !== undefined) {
+      // Reordering: moving a chip to a new position
+      const fromIndex = parseInt(dragIndex);
+      const toIndex = chip ? parseInt(chip.dataset.index) : commands.length;
+      
+      if (fromIndex !== toIndex && fromIndex >= 0 && toIndex >= 0) {
+        const [moved] = commands.splice(fromIndex, 1);
+        const insertIndex = toIndex > fromIndex ? toIndex - 1 : toIndex;
+        commands.splice(insertIndex, 0, moved);
+        updateTerminalFromCommands();
+        updateScoreMobile();
+      }
+    } else if (command) {
+      // Adding new command from button
+      if (chip) {
+        const insertIndex = parseInt(chip.dataset.index);
+        commands.splice(insertIndex, 0, command);
+      } else {
+        commands.push(command);
+      }
       updateTerminalFromCommands();
       updateScoreMobile();
     }
+    
+    dragOverIndex = -1;
   });
 
   // Initialize
