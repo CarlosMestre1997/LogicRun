@@ -364,7 +364,7 @@ function updateTerminalFromCommands() {
     commands.forEach((cmd, index) => {
       const chip = document.createElement('div');
       chip.className = 'command-chip';
-      chip.draggable = true;
+      // Chip is not draggable - only palette buttons can be dragged
       chip.dataset.index = index;
       
       // Check if command is spin(l) or spin(r) - these don't need parameter input
@@ -440,109 +440,7 @@ function updateTerminalFromCommands() {
         };
       }
       
-      // Drag handlers for reordering
-      chip.addEventListener('dragstart', (e) => {
-        e.dataTransfer.setData('text/plain', cmd);
-        e.dataTransfer.setData('index', index.toString());
-        e.dataTransfer.setData('type', 'chip');
-        chip.classList.add('dragging');
-      });
-      
-      chip.addEventListener('dragend', () => {
-        chip.classList.remove('dragging');
-        document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-      });
-      
-      // Touch-based drag for mobile
-      let touchStartY = 0;
-      let touchStartX = 0;
-      let touchStartIndex = -1;
-      let isDragging = false;
-      
-      chip.addEventListener('touchstart', (e) => {
-        if (e.target.closest('.remove-btn') || e.target.closest('.command-param')) {
-          return;
-        }
-        touchStartY = e.touches[0].clientY;
-        touchStartX = e.touches[0].clientX;
-        touchStartIndex = index;
-        isDragging = false;
-      }, { passive: true });
-      
-      chip.addEventListener('touchmove', (e) => {
-        if (touchStartIndex !== index) return;
-        
-        const touchY = e.touches[0].clientY;
-        const touchX = e.touches[0].clientX;
-        const deltaY = Math.abs(touchY - touchStartY);
-        const deltaX = Math.abs(touchX - touchStartX);
-        
-        if ((deltaY > 10 || deltaX > 10) && !isDragging) {
-          isDragging = true;
-          chip.classList.add('dragging');
-          if (e.cancelable) {
-            e.preventDefault();
-          }
-        }
-        
-        if (isDragging) {
-          if (e.cancelable) {
-            e.preventDefault();
-          }
-          const chips = Array.from(terminalDropZone.querySelectorAll('.command-chip'));
-          let targetChip = null;
-          
-          chips.forEach((c) => {
-            if (c === chip) return;
-            const cRect = c.getBoundingClientRect();
-            if (touchY >= cRect.top && touchY <= cRect.bottom) {
-              targetChip = c;
-            }
-          });
-          
-          chips.forEach(c => c.classList.remove('drag-over'));
-          if (targetChip) {
-            targetChip.classList.add('drag-over');
-          }
-        }
-      }, { passive: false });
-      
-      chip.addEventListener('touchend', (e) => {
-        if (!isDragging || touchStartIndex !== index) {
-          touchStartIndex = -1;
-          return;
-        }
-        
-        chip.classList.remove('dragging');
-        const touchY = e.changedTouches[0].clientY;
-        const chips = Array.from(terminalDropZone.querySelectorAll('.command-chip'));
-        
-        let targetIndex = -1;
-        chips.forEach((c) => {
-          if (c === chip) return;
-          const cRect = c.getBoundingClientRect();
-          if (touchY >= cRect.top && touchY <= cRect.bottom) {
-            targetIndex = parseInt(c.dataset.index);
-          }
-        });
-        
-        if (targetIndex >= 0 && targetIndex !== index) {
-          const [moved] = commands.splice(index, 1);
-          const insertIndex = targetIndex > index ? targetIndex - 1 : targetIndex;
-          commands.splice(insertIndex, 0, moved);
-          updateTerminalFromCommands();
-          updateScoreMobile();
-        }
-        
-        document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-        isDragging = false;
-        touchStartIndex = -1;
-        if (e.cancelable) {
-          e.preventDefault();
-        }
-      }, { passive: false });
-      
-      chip.draggable = true;
+      // Chips are not draggable - only buttons can be dragged into terminal
       chip.dataset.index = index;
       terminalDropZone.appendChild(chip);
     });
