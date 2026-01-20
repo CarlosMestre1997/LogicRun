@@ -43,6 +43,48 @@ export function isPlayerRegistered() {
 }
 
 /**
+ * Sign in an existing verified player by email
+ * Checks database for verified player and restores their session
+ * @param {string} email - Player's email
+ * @returns {Promise<{success: boolean, player?: object, error?: string}>}
+ */
+export async function signInExistingPlayer(email) {
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    return { success: false, error: 'Database not available' };
+  }
+
+  try {
+    // Check if verified player exists with this email
+    const { data, error } = await supabase
+      .from('players')
+      .select('*')
+      .eq('email', email.toLowerCase())
+      .eq('verified', true)
+      .single();
+
+    if (error || !data) {
+      return { success: false, error: 'No verified account found with this email' };
+    }
+
+    // Restore session locally
+    const session = {
+      email: data.email,
+      username: data.username,
+      score: data.score,
+      level: data.current_level,
+      verified: true,
+      id: data.id
+    };
+    savePlayerSession(session);
+
+    return { success: true, player: session };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Register a new player - sends magic link for email verification
  * @param {string} email - Player's email
  * @param {string} username - 3-character username

@@ -1,14 +1,8 @@
 // Level registry - central configuration for all levels
-import { level1 } from './level1.js';
-import { level2 } from './level2.js';
-import { level3 } from './level3.js';
-import { level4 } from './level4.js';
-import { level5 } from './level5.js';
-import { level6 } from './level6.js';
-import { level7 } from './level7.js';
-import { level8 } from './level8.js';
-import { level9 } from './level9.js';
-import { level10 } from './level10.js';
+import { 
+  level1, level2, level3, level4, level5, 
+  level6, level7, level8, level9, level10 
+} from './levels-data.js';
 
 export const levels = {
   1: { data: level1, password: 'MVE', next: 2, prev: null, name: 'Move', description: 'Learn to move', hints: ['move()', 'move()', 'move()'] },

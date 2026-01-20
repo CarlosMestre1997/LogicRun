@@ -125,7 +125,6 @@ export function createRegistrationModal(onRegister) {
   modal.innerHTML = `
     <div class="modal-content" style="max-width: 450px;">
       <div style="text-align: center; padding: 20px;">
-        <img src="/celebrate.png" alt="Startie" style="width: 150px; height: auto; image-rendering: pixelated; margin-bottom: 15px;">
         <h2 style="color: var(--white); margin-bottom: 10px;">🎉 Level Complete!</h2>
         <p style="color: #888; font-size: 14px; margin-bottom: 20px;">
           Join the leaderboard to compete with other players!<br>
@@ -175,7 +174,7 @@ export function createRegistrationModal(onRegister) {
     e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
   });
   
-  // Sign in for returning users - just needs email, sends magic link
+  // Sign in for returning users - check if verified account exists
   signInBtn.onclick = async () => {
     const email = emailInput.value.trim();
     
@@ -187,35 +186,18 @@ export function createRegistrationModal(onRegister) {
     }
     
     signInBtn.disabled = true;
-    signInBtn.textContent = 'Sending link...';
+    signInBtn.textContent = 'Checking...';
     
     try {
-      // Import sendMagicLink dynamically to avoid circular deps
-      const { sendMagicLink } = await import('../utils/supabase.js');
-      const result = await sendMagicLink(email);
+      // Import signInExistingPlayer to check if verified account exists
+      const { signInExistingPlayer } = await import('../utils/player-session.js');
+      const result = await signInExistingPlayer(email);
       
       if (result.success) {
-        modal.querySelector('.modal-content').innerHTML = `
-          <div style="text-align: center; padding: 30px;">
-            <h2 style="color: var(--white); margin-bottom: 15px;">📧 Check Your Email!</h2>
-            <p style="color: #888; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
-              We sent a sign-in link to:<br>
-              <strong style="color: var(--white);">${email}</strong>
-            </p>
-            <p style="color: #888; font-size: 13px;">
-              Click the link to sign in and continue your progress!
-            </p>
-            <button id="reg-continue" style="margin-top: 20px; padding: 12px 30px; background: var(--pink); border: none; color: var(--white); font-weight: bold; cursor: pointer; font-family: 'Courier New', monospace;">
-              Continue Playing
-            </button>
-          </div>
-        `;
-        
-        modal.querySelector('#reg-continue').onclick = () => {
-          modal.style.display = 'none';
-        };
+        // Account found and session restored - close modal and continue
+        modal.style.display = 'none';
       } else {
-        errorDiv.textContent = result.error || 'Failed to send sign-in link';
+        errorDiv.textContent = result.error || 'No verified account found with this email';
         signInBtn.disabled = false;
         signInBtn.textContent = 'I already have an account';
       }

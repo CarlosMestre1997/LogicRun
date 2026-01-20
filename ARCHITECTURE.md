@@ -16,8 +16,8 @@ startie/
 │   │   └── state.js         # Game state factory
 │   ├── levels/              # Level definitions
 │   │   ├── index.js         # Level registry & lookup functions
-│   │   ├── helpers.js       # Goal utility functions
-│   │   └── level[1-10].js   # Individual level data
+│   │   ├── levels-data.js   # All level configurations (consolidated)
+│   │   └── helpers.js       # Goal utility functions
 │   ├── render/              # Canvas rendering
 │   │   ├── index.js         # Render orchestration
 │   │   ├── grid.js          # Isometric grid & tiles
@@ -32,7 +32,7 @@ startie/
 │       ├── assets.js        # Asset path resolution
 │       ├── sounds.js        # Audio management
 │       ├── supabase.js      # Supabase client + authentication
-│       └── player-session.js # Player registration & real-time leaderboard
+│       └── player-session.js # Player registration, sign-in & real-time leaderboard
 ├── styles/                  # Modular CSS
 │   ├── base.css             # Variables & reset
 │   ├── banner.css           # Header banner
@@ -307,7 +307,8 @@ The system tracks the **best score per level**:
 1. After completing Level 1, players register with email + 3-char username
 2. Magic link sent for email verification
 3. Verified players appear on the real-time leaderboard
-4. Top 20 verified players displayed
+4. Returning players can sign in with just their email (no magic link needed)
+5. Top 20 verified players displayed
 
 ---
 
