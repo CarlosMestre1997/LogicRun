@@ -77,6 +77,9 @@ export async function signInExistingPlayer(email) {
       id: data.id
     };
     savePlayerSession(session);
+    
+    // Clear any stale level scores from localStorage to avoid conflicts
+    localStorage.removeItem(LEVEL_SCORES_KEY);
 
     return { success: true, player: session };
   } catch (error) {
@@ -237,32 +240,40 @@ function calculateTotalScore(levelScores) {
  * @returns {Promise<{success: boolean, newScore?: number, improved?: boolean, error?: string}>}
  */
 export async function updatePlayerScore(levelScore, levelNumber) {
-  // Get current best scores per level
+  // Get current best scores per level from localStorage
   const levelScores = getLevelScores();
   const previousBest = levelScores[levelNumber] || 0;
   
-  // Check if this is an improvement
+  // Check if this is an improvement for this level
   if (levelScore <= previousBest) {
     // No improvement, return current total
+    const session = getPlayerSession();
+    const currentTotal = session ? session.score : calculateTotalScore(levelScores);
     return { 
       success: true, 
-      newScore: calculateTotalScore(levelScores), 
+      newScore: currentTotal, 
       improved: false 
     };
   }
   
-  // Update best score for this level
+  // Calculate the score improvement (difference from previous best)
+  const scoreImprovement = levelScore - previousBest;
+  
+  // Update best score for this level in localStorage
   levelScores[levelNumber] = levelScore;
   saveLevelScores(levelScores);
-  const newTotalScore = calculateTotalScore(levelScores);
   
   const session = getPlayerSession();
   if (!session) {
     // Player not registered, store locally for now
+    const newTotalScore = calculateTotalScore(levelScores);
     localStorage.setItem('local_score', newTotalScore.toString());
     localStorage.setItem('local_level', levelNumber.toString());
     return { success: true, newScore: newTotalScore, improved: true };
   }
+
+  // For registered players, add the improvement to their existing database score
+  const newTotalScore = (session.score || 0) + scoreImprovement;
 
   const supabase = getSupabaseClient();
   if (!supabase) {

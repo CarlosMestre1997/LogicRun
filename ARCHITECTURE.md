@@ -2,7 +2,7 @@
 
 > A browser-based educational game teaching programming concepts through visual puzzles.
 
-## 🏗️ Project Structure
+##  Project Structure
 
 ```
 startie/
@@ -62,7 +62,7 @@ startie/
 
 ---
 
-## 🎮 Core Concepts
+##  Core Concepts
 
 ### Level Data Structure
 
@@ -138,7 +138,7 @@ Commands are parsed from terminal input:
 
 ---
 
-## 🛠️ Development Workflow
+##  Development Workflow
 
 ### Prerequisites
 
@@ -217,7 +217,7 @@ The project deploys automatically to Vercel on push to main branch.
 
 ---
 
-## 🎯 Adding a New Level
+##  Adding a New Level
 
 1. **Create level file** `src/levels/level11.js`:
    ```javascript
@@ -250,7 +250,7 @@ The project deploys automatically to Vercel on push to main branch.
 
 ---
 
-## 🔧 Configuration
+##  Configuration
 
 ### Environment Variables
 
@@ -268,7 +268,7 @@ The project deploys automatically to Vercel on push to main branch.
 
 ---
 
-## 🧪 Testing Checklist
+##  Testing Checklist
 
 When making changes, verify:
 
@@ -283,7 +283,7 @@ When making changes, verify:
 
 ---
 
-## 📊 Scoring & Leaderboard
+##  Scoring & Leaderboard
 
 ### Score Calculation
 
@@ -312,7 +312,7 @@ The system tracks the **best score per level**:
 
 ---
 
-## 🚧 Known Limitations
+##  Known Limitations
 
 1. **TypeScript ready** – tsconfig.json configured, migration pending
 2. **Modular CSS** – Split into 9 files in styles/
@@ -321,7 +321,7 @@ The system tracks the **best score per level**:
 
 ---
 
-## 📞 Quick Reference
+##  Quick Reference
 
 ```bash
 # Start dev server
