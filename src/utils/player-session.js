@@ -256,24 +256,26 @@ export async function updatePlayerScore(levelScore, levelNumber) {
     };
   }
   
-  // Calculate the score improvement (difference from previous best)
-  const scoreImprovement = levelScore - previousBest;
-  
   // Update best score for this level in localStorage
   levelScores[levelNumber] = levelScore;
   saveLevelScores(levelScores);
   
+  // Calculate total from localStorage level scores
+  const localTotalScore = calculateTotalScore(levelScores);
+  
   const session = getPlayerSession();
   if (!session) {
     // Player not registered, store locally for now
-    const newTotalScore = calculateTotalScore(levelScores);
-    localStorage.setItem('local_score', newTotalScore.toString());
+    localStorage.setItem('local_score', localTotalScore.toString());
     localStorage.setItem('local_level', levelNumber.toString());
-    return { success: true, newScore: newTotalScore, improved: true };
+    return { success: true, newScore: localTotalScore, improved: true };
   }
 
-  // For registered players, add the improvement to their existing database score
-  const newTotalScore = (session.score || 0) + scoreImprovement;
+  // For registered players, use the HIGHER of:
+  // - Their current database score
+  // - Their localStorage total (sum of best per level)
+  // This ensures score never goes down and properly handles returning players
+  const newTotalScore = Math.max(session.score || 0, localTotalScore);
 
   const supabase = getSupabaseClient();
   if (!supabase) {
@@ -298,6 +300,7 @@ export async function updatePlayerScore(levelScore, levelNumber) {
       .single();
 
     if (error) {
+      console.error('Supabase update error:', error);
       // Fallback to local update
       session.score = newTotalScore;
       session.level = Math.max(session.level || 1, levelNumber);
