@@ -1,6 +1,6 @@
 // Shared asset path utility
 export function getAssetPath(filename) {
-  // Vite handles asset paths automatically in production
-  return `/assets/${filename}`;
+  // Vite publicDir serves 'assets' folder at root
+  return `/${filename}`;
 }
 

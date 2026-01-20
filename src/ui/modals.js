@@ -75,7 +75,7 @@ export function createIntroModal(levelNumber) {
   modal.innerHTML = `
     <div class="modal-content" style="max-width: 500px;">
       <div style="text-align: center; padding: 0px;">
-        <img id="intro-celebrate-img" src="/assets/celebrate.png" alt="Startie" style="width: 400px; height: auto; image-rendering: pixelated;">
+        <img id="intro-celebrate-img" src="/celebrate.png" alt="Startie" style="width: 400px; height: auto; image-rendering: pixelated;">
         <h2 style="color: var(--white); margin-bottom: 15px;">Hi, I'm Startie!</h2>
         <p style="color: var(--white); font-size: 16px; line-height: 1.6;">Can you get me to the next level?<br>Write code to move me around, the less commands you write, the higher your score!</p>
         <button id="intro-close" style="margin-top: 10px; padding: 10px 30px; font-size: 16px; cursor: pointer; background: #0f00ff; color: #ff6fb8; border: none; border-radius: 4px;">Let's Go!</button>
@@ -125,7 +125,7 @@ export function createRegistrationModal(onRegister) {
   modal.innerHTML = `
     <div class="modal-content" style="max-width: 450px;">
       <div style="text-align: center; padding: 20px;">
-        <img src="/assets/celebrate.png" alt="Startie" style="width: 150px; height: auto; image-rendering: pixelated; margin-bottom: 15px;">
+        <img src="/celebrate.png" alt="Startie" style="width: 150px; height: auto; image-rendering: pixelated; margin-bottom: 15px;">
         <h2 style="color: var(--white); margin-bottom: 10px;">🎉 Level Complete!</h2>
         <p style="color: #888; font-size: 14px; margin-bottom: 20px;">
           Join the leaderboard to compete with other players!<br>
