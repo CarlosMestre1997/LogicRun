@@ -1,0 +1,42 @@
+// Level registry - central configuration for all levels
+import { level1 } from './level1.js';
+import { level2 } from './level2.js';
+import { level3 } from './level3.js';
+import { level4 } from './level4.js';
+import { level5 } from './level5.js';
+import { level6 } from './level6.js';
+import { level7 } from './level7.js';
+import { level8 } from './level8.js';
+import { level9 } from './level9.js';
+import { level10 } from './level10.js';
+
+export const levels = {
+  1: { data: level1, password: 'MVE', next: 2, prev: null, name: 'Move', description: 'Learn to move', hints: ['move()', 'move()', 'move()'] },
+  2: { data: level2, password: 'JMP', next: 3, prev: 1, name: 'Jump', description: 'Jump over obstacles', hints: ['move()', 'jump()'] },
+  3: { data: level3, password: 'SPN', next: 4, prev: 2, name: 'Spin', description: 'Rotate to change direction', hints: ['move()', 'spin(r)', 'move()'] },
+  4: { data: level4, password: 'HGT', next: 5, prev: 3, name: 'Height', description: 'Navigate elevated platforms', hints: ['move()', 'jump()'] },
+  5: { data: level5, password: 'HCK', next: 6, prev: 4, name: 'Hack', description: 'Pick up the laptop and loop', hints: ['while(hacking) {', 'move()', '}'] },
+  6: { data: level6, password: 'PTN', next: 7, prev: 5, name: 'Pattern', description: 'Use patterns efficiently', hints: ['move()', 'spin(r)'] },
+  7: { data: level7, password: 'SSS', next: 8, prev: 6, name: 'S-Curve', description: 'Navigate the S-shaped path', hints: ['move()', 'spin(l)', 'move()'] },
+  8: { data: level8, password: 'GLS', next: 9, prev: 7, name: 'Goals', description: 'Visit multiple goals', hints: ['while(hacking) {', 'move()', '}'] },
+  9: { data: level9, password: 'LOP', next: 10, prev: 8, name: 'Loop', description: 'Master the loop', hints: ['while(hacking) {', 'move()', '}'] },
+  10: { data: level10, password: 'FIN', next: null, prev: 9, name: 'Final', description: 'The final challenge', hints: ['while(hacking) {', 'move()', 'spin(r)', '}'] },
+};
+
+export function getLevelByPassword(password) {
+  const upper = password.toUpperCase();
+  const entry = Object.entries(levels).find(([_, level]) => level.password === upper);
+  return entry ? { number: parseInt(entry[0]), ...entry[1] } : null;
+}
+
+export function getLevelByNumber(num) {
+  const level = levels[num];
+  return level ? { number: num, ...level } : null;
+}
+
+export function getAllLevels() {
+  return Object.entries(levels).map(([num, level]) => ({
+    number: parseInt(num),
+    ...level
+  }));
+}
