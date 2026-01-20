@@ -150,6 +150,10 @@ export function createRegistrationModal(onRegister) {
           Send Verification Email
         </button>
         
+        <button id="reg-signin" style="width: 100%; padding: 10px; background: transparent; border: 1px solid var(--pink); color: var(--pink); cursor: pointer; font-family: 'Courier New', monospace; font-size: 13px; margin-bottom: 10px;">
+          I already have an account
+        </button>
+        
         <button id="reg-skip" style="width: 100%; padding: 10px; background: transparent; border: 1px solid #555; color: #888; cursor: pointer; font-family: 'Courier New', monospace; font-size: 13px;">
           Skip for now
         </button>
@@ -163,12 +167,64 @@ export function createRegistrationModal(onRegister) {
   const usernameInput = modal.querySelector('#reg-username');
   const errorDiv = modal.querySelector('#reg-error');
   const submitBtn = modal.querySelector('#reg-submit');
+  const signInBtn = modal.querySelector('#reg-signin');
   const skipBtn = modal.querySelector('#reg-skip');
   
   // Auto-uppercase username
   usernameInput.addEventListener('input', (e) => {
     e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
   });
+  
+  // Sign in for returning users - just needs email, sends magic link
+  signInBtn.onclick = async () => {
+    const email = emailInput.value.trim();
+    
+    errorDiv.textContent = '';
+    
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errorDiv.textContent = 'Please enter your email address above';
+      return;
+    }
+    
+    signInBtn.disabled = true;
+    signInBtn.textContent = 'Sending link...';
+    
+    try {
+      // Import sendMagicLink dynamically to avoid circular deps
+      const { sendMagicLink } = await import('../utils/supabase.js');
+      const result = await sendMagicLink(email);
+      
+      if (result.success) {
+        modal.querySelector('.modal-content').innerHTML = `
+          <div style="text-align: center; padding: 30px;">
+            <h2 style="color: var(--white); margin-bottom: 15px;">📧 Check Your Email!</h2>
+            <p style="color: #888; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+              We sent a sign-in link to:<br>
+              <strong style="color: var(--white);">${email}</strong>
+            </p>
+            <p style="color: #888; font-size: 13px;">
+              Click the link to sign in and continue your progress!
+            </p>
+            <button id="reg-continue" style="margin-top: 20px; padding: 12px 30px; background: var(--pink); border: none; color: var(--white); font-weight: bold; cursor: pointer; font-family: 'Courier New', monospace;">
+              Continue Playing
+            </button>
+          </div>
+        `;
+        
+        modal.querySelector('#reg-continue').onclick = () => {
+          modal.style.display = 'none';
+        };
+      } else {
+        errorDiv.textContent = result.error || 'Failed to send sign-in link';
+        signInBtn.disabled = false;
+        signInBtn.textContent = 'I already have an account';
+      }
+    } catch (error) {
+      errorDiv.textContent = error.message || 'An error occurred';
+      signInBtn.disabled = false;
+      signInBtn.textContent = 'I already have an account';
+    }
+  };
   
   submitBtn.onclick = async () => {
     const email = emailInput.value.trim();
