@@ -1,15 +1,16 @@
 // Grid rendering - data-driven from level tiles (isometric)
-import { getAssetPath } from '../utils/assets.js';
+import type { Level, GameState, GridInfo } from '../types';
+import { getAssetPath } from '../utils/assets';
 
 const ISO_TILE_WIDTH = 70;
 const ISO_TILE_HEIGHT = 35;
 
 // Laptop image for rendering
-let laptopImage = null;
+let laptopImage: HTMLImageElement | null = null;
 let laptopImageLoaded = false;
-let laptopImageCallbacks = [];
+let laptopImageCallbacks: (() => void)[] = [];
 
-export function loadLaptopImage(callback) {
+export function loadLaptopImage(callback?: () => void): HTMLImageElement | null {
   if (laptopImageLoaded) {
     if (callback) callback();
     return laptopImage;
@@ -35,19 +36,19 @@ export function loadLaptopImage(callback) {
   return laptopImage;
 }
 
-export function isLaptopImageLoaded() {
+export function isLaptopImageLoaded(): boolean {
   return laptopImageLoaded;
 }
 
 // Convert grid coordinates to isometric screen coordinates
-function gridToIso(gridX, gridY, offsetX = 0, offsetY = 0) {
+function gridToIso(gridX: number, gridY: number, offsetX = 0, offsetY = 0): { x: number; y: number } {
   const isoX = offsetX + (gridX - gridY) * (ISO_TILE_WIDTH / 2);
   const isoY = offsetY + (gridX + gridY) * (ISO_TILE_HEIGHT / 2);
   return { x: isoX, y: isoY };
 }
 
 // Draw an isometric tile
-function drawIsoTile(ctx, gridX, gridY, color, height = 0, offsetX = 0, offsetY = 0) {
+function drawIsoTile(ctx: CanvasRenderingContext2D, gridX: number, gridY: number, color: string, height = 0, offsetX = 0, offsetY = 0): void {
   const { x, y } = gridToIso(gridX, gridY, offsetX, offsetY);
   
   ctx.save();
@@ -60,7 +61,6 @@ function drawIsoTile(ctx, gridX, gridY, color, height = 0, offsetX = 0, offsetY 
   if (height > 0) {
     // Create a subtle shadow effect by drawing darker side edges
     const shadowColor = 'rgba(0, 0, 0, 0.15)';
-    const shadowOffset = 2;
     
     // Left shadow edge
     ctx.fillStyle = shadowColor;
@@ -99,7 +99,7 @@ function drawIsoTile(ctx, gridX, gridY, color, height = 0, offsetX = 0, offsetY 
   ctx.restore();
 }
 
-export function drawGrid(ctx, level, state = null) {
+export function drawGrid(ctx: CanvasRenderingContext2D, level: Level, state: GameState | null = null): GridInfo {
   // Clear canvas
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -131,7 +131,7 @@ export function drawGrid(ctx, level, state = null) {
   const gridY = (ctx.canvas.height - gridAreaHeight) / 2 - minIsoY + BASE_OFFSET_Y;
   
   // Create grid info for character positioning (returned instead of stored globally)
-  const gridInfo = {
+  const gridInfo: GridInfo = {
     x: 0, // Grid offset X (for isometric calculations)
     y: 0, // Grid offset Y (for isometric calculations)
     width: gridAreaWidth,
@@ -150,7 +150,7 @@ export function drawGrid(ctx, level, state = null) {
       const tile = level.tiles[y][x];
       
       // Check if there's an elevated goal at this position
-      const elevatedGoalHere = level.goals && level.goals.some(g => g.x === x && g.y === y && g.height > 0);
+      const elevatedGoalHere = level.goals && level.goals.some(g => g.x === x && g.y === y && g.height && g.height > 0);
       
       // Check for lifted tile (height property or lifted type)
       const tileHeight = tile.height !== undefined ? tile.height : (tile.type === 'lifted' ? 1 : 0);

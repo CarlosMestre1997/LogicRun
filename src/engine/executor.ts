@@ -1,67 +1,87 @@
 // Command execution - logic first, animation second
-import { createState, nextTile, rotateFacing, DIR } from './state.js';
-import { isValidPosition, isHole, isGoal, isLiftedTile, getTileHeight, isLaptop } from '../levels/helpers.js';
-import { playJumpSound, playSpinSound, playFallSound } from '../utils/sounds.js';
+import type { 
+  Level, 
+  GameState, 
+  Action, 
+  Animation, 
+  DrawFunction,
+  MoveAction,
+  JumpAction,
+  SpinAction,
+  WhileAction,
+  WhileCheckAction,
+  Executor
+} from '../types';
+import { createState, createAnimationState, resetAnimationState, nextTile, rotateFacing, DIR } from './state';
+import { isValidPosition, isHole, isGoal, isLiftedTile, getTileHeight, isLaptop } from '../levels/helpers';
+import { playJumpSound, playSpinSound, playFallSound } from '../utils/sounds';
 
 // Animation queue item
-function createAnimation(type, from, to, duration, callback) {
+function createAnimation(
+  type: Animation['type'], 
+  from: Partial<{ x: number; y: number; z: number }>, 
+  to: Partial<{ x: number; y: number; z: number }>, 
+  duration: number, 
+  callback?: () => void
+): Animation {
   return { type, from, to, duration, callback, startTime: null };
 }
 
-export function createExecutor(level) {
+export function createExecutor(level: Level): Executor {
   const state = createState();
-  let animationQueue = [];
-  let currentAnimation = null;
+  const animState = createAnimationState(); // Separate animation state for visual-only values
+  let animationQueue: Animation[] = [];
+  let currentAnimation: Animation | null = null;
   
   // Animation interpolation (visual only, never affects state)
-  function lerp(start, end, t) {
+  function lerp(start: number, end: number, t: number): number {
     return start + (end - start) * t;
   }
   
-  function updateAnimation(now) {
+  function updateAnimation(now: number): void {
     if (!currentAnimation) {
       if (animationQueue.length === 0) {
         return;
       }
-      currentAnimation = animationQueue.shift();
+      currentAnimation = animationQueue.shift()!;
       currentAnimation.startTime = now;
     }
     
-    const elapsed = now - currentAnimation.startTime;
+    const elapsed = now - currentAnimation.startTime!;
     const progress = Math.min(elapsed / currentAnimation.duration, 1);
     
     if (currentAnimation.type === 'move') {
       const t = progress;
       // Animation values (for rendering only)
-      state.animX = lerp(currentAnimation.from.x, currentAnimation.to.x, t);
-      state.animY = lerp(currentAnimation.from.y, currentAnimation.to.y, t);
+      animState.x = lerp(currentAnimation.from.x!, currentAnimation.to.x!, t);
+      animState.y = lerp(currentAnimation.from.y!, currentAnimation.to.y!, t);
     } else if (currentAnimation.type === 'jump') {
       const t = progress;
-      state.animX = lerp(currentAnimation.from.x, currentAnimation.to.x, t);
-      state.animY = lerp(currentAnimation.from.y, currentAnimation.to.y, t);
+      animState.x = lerp(currentAnimation.from.x!, currentAnimation.to.x!, t);
+      animState.y = lerp(currentAnimation.from.y!, currentAnimation.to.y!, t);
       // Height animation: up then down
       const z = progress < 0.5 
         ? lerp(0, 1, progress * 2)
         : lerp(1, 0, (progress - 0.5) * 2);
-      state.animZ = z;
+      animState.z = z;
     } else if (currentAnimation.type === 'fall') {
       // Falling animation: character sinks into hole/void
       const t = progress;
-      state.animZ = lerp(currentAnimation.from.z, currentAnimation.to.z, t);
+      animState.z = lerp(currentAnimation.from.z!, currentAnimation.to.z!, t);
       // Also fade out as character sinks
-      state.animAlpha = 1 - (t * 0.7); // Fade to 30% opacity
+      animState.alpha = 1 - (t * 0.7); // Fade to 30% opacity
     } else if (currentAnimation.type === 'spin') {
-      state.animRotation = progress * 360;
+      animState.rotation = progress * 360;
     }
     
     if (progress >= 1) {
       // Animation complete - snap to final position
       if (currentAnimation.type === 'move' || currentAnimation.type === 'jump') {
         // Ensure we're at the exact final position (no interpolation artifacts)
-        state.animX = currentAnimation.to.x;
-        state.animY = currentAnimation.to.y;
+        animState.x = currentAnimation.to.x!;
+        animState.y = currentAnimation.to.y!;
         if (currentAnimation.type === 'jump') {
-          state.animZ = 0;
+          animState.z = 0;
         }
       }
       
@@ -71,33 +91,29 @@ export function createExecutor(level) {
       
       // Clear animation after a brief moment to ensure final position is drawn
       setTimeout(() => {
-        delete state.animX;
-        delete state.animY;
-        delete state.animZ;
-        delete state.animRotation;
-        delete state.animAlpha;
+        resetAnimationState(animState);
         if (callback) callback();
       }, 16);
     }
   }
   
   // Start animation loop
-  let animationId = null;
-  let ghostAnimationId = null;
+  let animationId: number | null = null;
+  let ghostAnimationId: number | null = null;
   
-  function stopAnimationLoop() {
+  function stopAnimationLoop(): void {
     if (animationId) {
       cancelAnimationFrame(animationId);
       animationId = null;
     }
   }
   
-  function startAnimationLoop(draw) {
+  function startAnimationLoop(draw: DrawFunction): void {
     if (animationId) return;
     
-    function animate(now) {
+    function animate(now: number): void {
       updateAnimation(now);
-      draw(state);
+      draw(state, animState);
       
       if (animationQueue.length > 0 || currentAnimation) {
         animationId = requestAnimationFrame(animate);
@@ -108,9 +124,9 @@ export function createExecutor(level) {
     animationId = requestAnimationFrame(animate);
   }
   
-  let currentOnFinish = null;
+  let currentOnFinish: ((state: GameState) => void) | null = null;
   
-  function animateGhost(draw) {
+  function animateGhost(draw: DrawFunction): void {
     // Stop any ongoing animation loop
     stopAnimationLoop();
     
@@ -119,18 +135,18 @@ export function createExecutor(level) {
     const fadeStartY = 50;
     const disappearY = -20; // Disappear completely before canvas edge
     
-    if (state.ghostY > disappearY) {
-      state.ghostY -= 3; // Slower movement (was 6)
+    if (animState.ghostY !== null && animState.ghostY > disappearY) {
+      animState.ghostY -= 3; // Slower movement (was 6)
       
       // Fade out as ghost approaches top
-      if (state.ghostY < fadeStartY) {
-        const fadeProgress = (fadeStartY - state.ghostY) / (fadeStartY - disappearY);
-        state.ghostAlpha = Math.max(0, 1 - fadeProgress);
+      if (animState.ghostY < fadeStartY) {
+        const fadeProgress = (fadeStartY - animState.ghostY) / (fadeStartY - disappearY);
+        animState.ghostAlpha = Math.max(0, 1 - fadeProgress);
       } else {
-        state.ghostAlpha = 1;
+        animState.ghostAlpha = 1;
       }
       
-      draw(state);
+      draw(state, animState);
       ghostAnimationId = requestAnimationFrame(() => animateGhost(draw));
     } else {
       // Reset to start position after ghost animation
@@ -144,21 +160,16 @@ export function createExecutor(level) {
       state.facing = 'SE';
       state.hasLaptop = false; // Reset laptop when respawning
       state.ghostVisible = false;
-      state.ghostY = undefined;
-      state.ghostAlpha = undefined;
       state.failed = false;
-      // Clear any animation values
-      delete state.animX;
-      delete state.animY;
-      delete state.animZ;
-      delete state.animRotation;
-      draw(state);
+      // Clear all animation state
+      resetAnimationState(animState);
+      draw(state, animState);
       if (currentOnFinish) currentOnFinish(state);
     }
   }
   
   // Helper to handle falling animation after failed move/jump
-  function handleFall(draw) {
+  function handleFall(draw: DrawFunction): void {
     state.failed = true;
     
     // Play fall sound
@@ -171,8 +182,8 @@ export function createExecutor(level) {
       400,
       () => {
         state.ghostVisible = true;
-        state.ghostY = null; // Will be initialized by render layer
-        draw(state);
+        animState.ghostY = null; // Will be initialized by render layer
+        draw(state, animState);
         animateGhost(draw);
       }
     ));
@@ -180,19 +191,20 @@ export function createExecutor(level) {
   }
   
   // Helper to copy body actions for while loop
-  function copyBodyActions(body) {
-    const copy = [];
+  function copyBodyActions(body: Action[]): Action[] {
+    const copy: Action[] = [];
     for (const a of body) {
       if (a.type === 'spin') {
-        copy.push({ type: 'spin', direction: a.direction });
+        const spinAction = a as SpinAction;
+        copy.push({ type: 'spin', direction: spinAction.direction } as SpinAction);
       } else {
-        copy.push({ type: a.type });
+        copy.push({ type: a.type } as Action);
       }
     }
     return copy;
   }
   
-  function execute(actions, draw, onFinish) {
+  function execute(actions: Action[], draw: DrawFunction, onFinish: (state: GameState) => void): void {
     // Check if any while loops are used (required for laptop pickup in levels with laptops)
     const hasWhileLoop = actions.some(action => action.type === 'while');
     
@@ -205,15 +217,11 @@ export function createExecutor(level) {
     animationQueue = [];
     currentAnimation = null;
     
-    // Clear all animation state properties
-    delete state.animX;
-    delete state.animY;
-    delete state.animZ;
-    delete state.animRotation;
-    delete state.animAlpha;
+    // Clear all animation state
+    resetAnimationState(animState);
     
     // Helper to check and handle laptop pickup (needs access to draw parameter)
-    function checkLaptopPickup() {
+    function checkLaptopPickup(): void {
       if (isLaptop(level, state.x, state.y)) {
         // In levels with laptops, require a while(hacking) loop to pick up the laptop
         if (level.laptop !== undefined && !hasWhileLoop) {
@@ -223,12 +231,12 @@ export function createExecutor(level) {
           return;
         }
         state.hasLaptop = true;
-        draw(state);
+        draw(state, animState);
       }
     }
     
     // Helper to check and track visited goals (for levels with multiple goals)
-    function checkGoalsVisited() {
+    function checkGoalsVisited(): void {
       if (level.goals && Array.isArray(level.goals)) {
         level.goals.forEach(goal => {
           if (state.x === goal.x && state.y === goal.y && state.z === 0) {
@@ -239,42 +247,47 @@ export function createExecutor(level) {
     }
     
     // Helper to check if all goals are visited (for levels with multiple goals)
-    function allGoalsVisited() {
+    function allGoalsVisited(): boolean {
       if (level.goals && Array.isArray(level.goals)) {
         return state.visitedGoals.size >= level.goals.length;
       }
       return false;
     }
+    
     currentOnFinish = onFinish; // Store for animateGhost to access
+    
     // Expand actions with count property into individual actions for execution
     state.queue = [];
     for (const action of actions) {
-      if (action.count && (action.type === 'move' || action.type === 'jump')) {
+      if ((action.type === 'move' || action.type === 'jump') && 
+          (action as MoveAction | JumpAction).count) {
+        const countAction = action as MoveAction | JumpAction;
         // Expand grouped move/jump commands into individual actions for execution
-        for (let i = 0; i < action.count; i++) {
-          state.queue.push({ type: action.type });
+        for (let i = 0; i < (countAction.count || 1); i++) {
+          state.queue.push({ type: action.type } as Action);
         }
       } else if (action.type === 'while') {
+        const whileAction = action as WhileAction;
         // Recursively expand while loop body actions
-        const expandedBody = [];
-        for (const bodyAction of action.body) {
-          if (bodyAction.count && (bodyAction.type === 'move' || bodyAction.type === 'jump')) {
-            for (let i = 0; i < bodyAction.count; i++) {
-              expandedBody.push({ type: bodyAction.type });
+        const expandedBody: Action[] = [];
+        for (const bodyAction of whileAction.body) {
+          if ((bodyAction.type === 'move' || bodyAction.type === 'jump') && 
+              (bodyAction as MoveAction | JumpAction).count) {
+            const countAction = bodyAction as MoveAction | JumpAction;
+            for (let i = 0; i < (countAction.count || 1); i++) {
+              expandedBody.push({ type: bodyAction.type } as Action);
             }
           } else {
             expandedBody.push(bodyAction);
           }
         }
-        state.queue.push({ ...action, body: expandedBody });
+        state.queue.push({ ...whileAction, body: expandedBody } as WhileAction);
       } else {
         state.queue.push(action);
       }
     }
     state.failed = false;
     state.ghostVisible = false;
-    state.ghostY = undefined;
-    state.ghostAlpha = undefined;
     state.stepCount = actions.length;
     
     // Reset to start position
@@ -283,9 +296,9 @@ export function createExecutor(level) {
     state.z = 0;
     state.facing = 'SE';
     state.hasLaptop = false;
-    state.visitedGoals = new Set();
+    state.visitedGoals = new Set<string>();
     
-    function processAction() {
+    function processAction(): void {
       if (state.queue.length === 0) {
         // All actions processed, wait for animations to finish
         if (!currentAnimation && animationQueue.length === 0) {
@@ -294,7 +307,7 @@ export function createExecutor(level) {
         return;
       }
 
-      const action = state.queue.shift();
+      const action = state.queue.shift()!;
 
       if (action.type === 'move') {
         const target = nextTile(state);
@@ -348,7 +361,7 @@ export function createExecutor(level) {
           y: state.y + DIR[state.facing].dy
         };
         
-        let jumpTarget;
+        let jumpTarget: { x: number; y: number };
         if (isLiftedTile(level, frontTile.x, frontTile.y)) {
           // Jump onto the lifted tile directly in front
           jumpTarget = frontTile;
@@ -396,8 +409,9 @@ export function createExecutor(level) {
       }
 
       if (action.type === 'while') {
+        const whileAction = action as WhileAction;
         // while(hacking) means while hasLaptop - can only be used if you have the laptop
-        if (action.condition === 'hacking') {
+        if (whileAction.condition === 'hacking') {
           // Check if player has laptop - required to use while(hacking)
           if (!state.hasLaptop) {
             state.failed = true;
@@ -412,11 +426,11 @@ export function createExecutor(level) {
             : !isGoal(level, state.x, state.y);
             
           if (state.hasLaptop && shouldContinue) {
-            const bodyCopy = copyBodyActions(action.body);
+            const bodyCopy = copyBodyActions(whileAction.body);
             for (let i = bodyCopy.length - 1; i >= 0; i--) {
               state.queue.unshift(bodyCopy[i]);
             }
-            state.queue.push({ type: 'while-check', originalAction: action });
+            state.queue.push({ type: 'while-check', originalAction: whileAction } as WhileCheckAction);
             processAction();
           } else {
             processAction();
@@ -430,8 +444,9 @@ export function createExecutor(level) {
       }
       
       if (action.type === 'while-check') {
+        const whileCheckAction = action as WhileCheckAction;
         // This runs after while loop body completes - re-check the condition
-        const originalAction = action.originalAction;
+        const originalAction = whileCheckAction.originalAction;
         if (originalAction.condition === 'hacking') {
           // For levels with multiple goals, continue until all are visited
           // For single goal levels, continue until at goal
@@ -444,7 +459,7 @@ export function createExecutor(level) {
             for (let i = bodyCopy.length - 1; i >= 0; i--) {
               state.queue.unshift(bodyCopy[i]);
             }
-            state.queue.push({ type: 'while-check', originalAction: originalAction });
+            state.queue.push({ type: 'while-check', originalAction: originalAction } as WhileCheckAction);
             processAction();
           } else {
             processAction();
@@ -454,8 +469,9 @@ export function createExecutor(level) {
       }
 
       if (action.type === 'spin') {
+        const spinAction = action as SpinAction;
         // LOGIC FIRST: Update facing (discrete state change)
-        state.facing = rotateFacing(state.facing, action.direction);
+        state.facing = rotateFacing(state.facing, spinAction.direction);
         
         // Play spin sound
         playSpinSound();
@@ -480,9 +496,9 @@ export function createExecutor(level) {
       onFinish(state);
     } else {
       processAction();
-      draw(state);
+      draw(state, animState);
     }
   }
 
-  return { state, execute };
+  return { state, animState, execute };
 }

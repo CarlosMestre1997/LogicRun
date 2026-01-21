@@ -2,340 +2,314 @@
 
 > A browser-based educational game teaching programming concepts through visual puzzles.
 
-##  Project Structure
+## Tech Stack
+
+- **TypeScript** – Strict mode, full type coverage
+- **Vite** – Build tool with HMR and multi-page support
+- **Vitest** – Unit testing (29 tests)
+- **Supabase** – Authentication (magic links) and real-time leaderboard
+- **Vercel** – Deployment
+
+---
+
+## Project Structure
 
 ```
 startie/
 ├── src/
-│   ├── main.js              # Entry point for play.html
-│   ├── engine/              # Game logic core
-│   │   ├── index.js         # Engine factory & exports
-│   │   ├── commands.js      # Command parser (move, jump, spin, while)
-│   │   ├── executor.js      # Command execution & state machine
-│   │   ├── rules.js         # Scoring & win condition logic
-│   │   └── state.js         # Game state factory
-│   ├── levels/              # Level definitions
-│   │   ├── index.js         # Level registry & lookup functions
-│   │   ├── levels-data.js   # All level configurations (consolidated)
-│   │   └── helpers.js       # Goal utility functions
-│   ├── render/              # Canvas rendering
-│   │   ├── index.js         # Render orchestration
-│   │   ├── grid.js          # Isometric grid & tiles
-│   │   ├── startie.js       # Character sprite rendering
-│   │   └── animations.js    # Celebration & ghost effects
-│   ├── ui/                  # User interface modules
-│   │   ├── terminal.js      # Code input handling
-│   │   ├── mobile-commands.js # Mobile command buttons
-│   │   ├── modals.js        # Password & intro dialogs
-│   │   └── navigation.js    # Level navigation buttons
-│   └── utils/               # Utilities & services
-│       ├── assets.js        # Asset path resolution
-│       ├── sounds.js        # Audio management
-│       ├── supabase.js      # Supabase client + authentication
-│       └── player-session.js # Player registration, sign-in & real-time leaderboard
-├── styles/                  # Modular CSS
-│   ├── base.css             # Variables & reset
-│   ├── banner.css           # Header banner
-│   ├── game.css             # Game container & canvas
-│   ├── highscores.css       # Leaderboard panel
-│   ├── landing.css          # Landing page styles
-│   ├── mobile.css           # Mobile responsive styles
-│   ├── modal.css            # Modal dialogs
-│   ├── navigation.css       # Nav buttons
-│   ├── terminal.css         # Terminal input
-│   └── ui.css               # UI panel
-├── tests/                   # Unit tests
-│   ├── commands.test.js     # Command parser tests
-│   └── rules.test.js        # Game rules tests
+│   ├── types.ts              # Shared type definitions
+│   ├── main.ts               # Entry point for play.html
+│   ├── engine/               # Game logic core
+│   │   ├── index.ts          # Engine factory & exports
+│   │   ├── commands.ts       # Command parser (move, jump, spin, while)
+│   │   ├── executor.ts       # Command execution & animation state machine
+│   │   ├── rules.ts          # Scoring & win condition logic
+│   │   └── state.ts          # Game state & animation state factories
+│   ├── levels/               # Level definitions
+│   │   ├── index.ts          # Level registry & lookup functions
+│   │   ├── levels-data.ts    # All 10 level configurations
+│   │   └── helpers.ts        # Tile validation utilities
+│   ├── render/               # Canvas rendering
+│   │   ├── index.ts          # Render orchestration
+│   │   ├── grid.ts           # Isometric grid & tiles
+│   │   ├── startie.ts        # Character sprite rendering
+│   │   └── animations.ts     # Celebration & ghost effects
+│   ├── ui/                   # User interface modules
+│   │   ├── terminal.ts       # Code input handling
+│   │   ├── mobile-commands.ts # Mobile command palette
+│   │   ├── modals.ts         # Registration, password & intro dialogs
+│   │   └── navigation.ts     # Level navigation buttons
+│   └── utils/                # Utilities & services
+│       ├── assets.ts         # Asset path resolution
+│       ├── sounds.ts         # Audio management
+│       ├── supabase.ts       # Supabase client & authentication
+│       ├── leaderboard-supabase.ts # Leaderboard CRUD operations
+│       └── player-session.ts # Player registration & session management
+├── styles/                   # Modular CSS (9 files)
+│   ├── base.css              # Variables & reset
+│   ├── banner.css            # Header banner
+│   ├── game.css              # Game container & canvas
+│   ├── highscores.css        # Leaderboard panel
+│   ├── landing.css           # Landing page
+│   ├── mobile.css            # Mobile responsive
+│   ├── modal.css             # Modal dialogs
+│   ├── navigation.css        # Nav buttons
+│   ├── terminal.css          # Terminal input
+│   └── ui.css                # UI panel
+├── tests/                    # Unit tests
+│   ├── commands.test.ts      # Command parser tests (15)
+│   └── rules.test.ts         # Game rules tests (14)
 ├── assets/
-│   └── sounds/              # Audio files
-├── index.html               # Landing page
-├── play.html                # Game page (all levels)
-├── highscores.html          # Leaderboard page
-├── style.css                # CSS imports (modular)
-├── tsconfig.json            # TypeScript configuration
-├── vite.config.js           # Vite bundler configuration
-├── package.json             # Dependencies & scripts
-├── vercel.json              # Deployment configuration
-└── .env                     # Environment variables (not committed)
+│   └── sounds/               # Audio files
+├── index.html                # Landing page
+├── play.html                 # Game page (all levels)
+├── highscores.html           # Leaderboard page
+├── style.css                 # CSS imports
+├── tsconfig.json             # TypeScript strict config
+├── vite.config.js            # Vite multi-page config
+├── vercel.json               # Deployment config
+└── package.json              # Dependencies & scripts
 ```
 
 ---
 
-##  Core Concepts
+## Core Types
+
+Defined in [src/types.ts](src/types.ts):
+
+```typescript
+// Direction and sprite mapping
+type Direction = 'SE' | 'NE' | 'NW' | 'SW';
+type SpriteVariant = 'rd' | 'ru' | 'lu' | 'ld';
+
+// Level structure
+interface Level {
+  width: number;
+  height: number;
+  start: Position;
+  goals: Goal[];
+  tiles: Tile[][];
+  allowJump: boolean;
+  levelNumber: number;
+  laptop?: Position;        // Optional laptop for while(hacking) levels
+  liftedTiles?: Position[]; // Elevated tiles
+}
+
+// Game state (logic)
+interface GameState {
+  x: number;
+  y: number;
+  z: number;                // Height (0 = ground, 1+ = elevated)
+  facing: Direction;
+  queue: Action[];
+  failed: boolean;
+  ghostVisible: boolean;
+  stepCount: number;
+  hasLaptop: boolean;
+  visitedGoals: Set<string>;
+}
+
+// Animation state (visual only, separate from game logic)
+interface AnimationState {
+  x: number | null;         // Interpolated position
+  y: number | null;
+  z: number | null;         // Jump height
+  rotation: number | null;  // Spin animation
+  alpha: number | null;     // Fall fade
+  ghostY: number | null;
+  ghostAlpha: number | null;
+}
+
+// Command actions
+type Action = MoveAction | JumpAction | SpinAction | WhileAction | WhileCheckAction;
+```
+
+---
+
+## Architecture Decisions
+
+### Separation of Game State and Animation State
+
+The game maintains two distinct state objects:
+
+1. **GameState** – Discrete grid coordinates, logical game state
+2. **AnimationState** – Visual interpolation values for smooth rendering
+
+This separation ensures:
+- Clean game logic without visual concerns
+- Animations can be reset without affecting game state
+- No `delete` statements for animation cleanup
+
+### Command Execution Flow
+
+```
+Terminal Input → Parser → Actions[] → Executor → GameState + AnimationState → Renderer
+```
+
+1. **Parser** ([commands.ts](src/engine/commands.ts)) – Converts text to action objects
+2. **Executor** ([executor.ts](src/engine/executor.ts)) – Runs actions, updates state
+3. **Renderer** ([render/index.ts](src/render/index.ts)) – Draws based on both states
 
 ### Level Data Structure
 
-Each level is a JavaScript object with the following shape:
+Each level in [levels-data.ts](src/levels/levels-data.ts):
 
-```javascript
-export const level1 = {
-  tiles: [                    // 2D array of tile heights (0 = void, 1+ = ground)
-    [0, 1, 1, 1, 0],
-    [0, 0, 0, 0, 0],
+```typescript
+export const level1: Level = {
+  width: 5,
+  height: 5,
+  start: { x: 0, y: 2 },
+  goals: [{ x: 4, y: 2 }],
+  tiles: [
+    [{ type: 'floor' }, { type: 'floor' }, ...],
+    // 2D array of tiles
   ],
-  start: { x: 0, y: 0, z: 1, facing: 'E' },  // Starting position & direction
-  goals: [{ x: 2, y: 0, z: 1 }],             // Win condition positions (array)
-  laptop: null,               // Optional: { x, y, z } for hackable laptop
-  maxCommands: 3,             // Maximum commands allowed
+  allowJump: true,
+  levelNumber: 1
 };
 ```
-
-**Important:** The `goals` property is always an array, even for single goals.
-
-### Level Registry
-
-Levels are registered in [src/levels/index.js](src/levels/index.js):
-
-```javascript
-export const levels = {
-  1: { 
-    data: level1,           // Level data object
-    password: 'MVE',        // Level access code
-    next: 2,                // Next level number (null if final)
-    prev: null,             // Previous level number (null if first)
-    name: 'Move',           // Display name
-    description: 'Learn to move',
-    hints: ['move()', 'move()', 'move()']  // Starter code hints
-  },
-  // ...
-};
-```
-
-### URL Routing
-
-The game uses URL parameters to load levels:
-- `/play.html?password=MVE` – Load by password (primary method)
-- `/play.html?level=1` – Load by level number (fallback)
-
-### Game State
-
-The engine maintains immutable state transitions:
-
-```javascript
-{
-  x, y, z,           // Position on grid
-  facing,            // Direction: 'N', 'E', 'S', 'W'
-  status,            // 'playing', 'won', 'lost'
-  dead,              // Boolean death state
-  hacking,           // Boolean laptop collected state
-  goalsVisited,      // Set of visited goal coordinates
-  ghostVisible,      // Animation state
-  ghostY,            // Ghost vertical position
-}
-```
-
-### Command Parser
-
-Commands are parsed from terminal input:
-
-| Command | Syntax | Description |
-|---------|--------|-------------|
-| Move | `move()` | Move forward one tile |
-| Jump | `jump()` | Jump forward (can clear gaps/walls) |
-| Spin | `spin(l)` or `spin(r)` | Rotate left or right |
-| Loop | `while(hacking) { ... }` | Repeat until all goals visited |
 
 ---
 
-##  Development Workflow
+## Game Commands
+
+| Command | Syntax | Description |
+|---------|--------|-------------|
+| Move | `move()` or `move(n)` | Move forward 1 or n tiles |
+| Jump | `jump()` or `jump(n)` | Jump forward (clears gaps) |
+| Spin | `spin(l)` or `spin(r)` | Rotate left or right |
+| Loop | `while(hacking) { ... }` | Repeat until goal reached |
+
+---
+
+## Player Flow
+
+1. **Level 1 loads** → Intro modal appears
+2. **"Let's Go!" clicked** → Registration modal (if not registered)
+3. **Register/Skip** → Game begins
+4. **Complete level** → Score saved, navigate to next level
+5. **Leaderboard** → Real-time updates via Supabase subscription
+
+### Registration
+
+- Email + 3-character username
+- Magic link verification email
+- Returning users sign in with email only (no magic link)
+- Top 20 verified players on leaderboard
+
+---
+
+## Scoring
+
+```
+Score = 1000 - (commandCount × 100)
+Minimum = 100
+```
+
+- Each command costs 100 points
+- Best score per level is tracked
+- Total score = sum of best scores
+
+---
+
+## Development
 
 ### Prerequisites
 
 - Node.js 18+
-- npm or yarn
+- Supabase project (for leaderboard)
 
-### Setup
-
-```bash
-# Install dependencies
-npm install
-
-# Create environment file
-cp .env.example .env
-# Add your Supabase credentials to .env
-```
-
-### Development Server
+### Commands
 
 ```bash
-npm run dev
-# Opens at http://localhost:3000
+npm install          # Install dependencies
+npm run dev          # Start dev server (localhost:5173)
+npm run build        # Production build (dist/)
+npm run preview      # Preview production build
+npm test             # Run tests (watch mode)
+npm run test:run     # Run tests once
 ```
-
-### Production Build
-
-```bash
-npm run build
-# Output in dist/
-```
-
-### Deployment
-
-The project deploys automatically to Vercel on push to main branch.
-
----
-
-## 📁 Module Reference
-
-### Engine (`src/engine/`)
-
-| File | Purpose |
-|------|---------|
-| [index.js](src/engine/index.js) | Creates engine instance, exports score utilities |
-| [commands.js](src/engine/commands.js) | Parses terminal text into command objects |
-| [executor.js](src/engine/executor.js) | Executes commands, handles state transitions |
-| [rules.js](src/engine/rules.js) | Win condition, scoring algorithm |
-| [state.js](src/engine/state.js) | Creates initial game state from level |
-
-### Render (`src/render/`)
-
-| File | Purpose |
-|------|---------|
-| [index.js](src/render/index.js) | Orchestrates rendering, asset loading |
-| [grid.js](src/render/grid.js) | Isometric tile rendering, grid calculations |
-| [startie.js](src/render/startie.js) | Character sprite drawing |
-| [animations.js](src/render/animations.js) | Celebration, ghost effects |
-
-### UI (`src/ui/`)
-
-| File | Purpose |
-|------|---------|
-| [terminal.js](src/ui/terminal.js) | Terminal input formatting & events |
-| [mobile-commands.js](src/ui/mobile-commands.js) | Touch-friendly command buttons |
-| [modals.js](src/ui/modals.js) | Password entry, intro overlays |
-| [navigation.js](src/ui/navigation.js) | Level navigation buttons |
-
-### Utils (`src/utils/`)
-
-| File | Purpose |
-|------|---------|
-| [assets.js](src/utils/assets.js) | Asset URL resolution for Vite |
-| [sounds.js](src/utils/sounds.js) | Audio playback, preferences |
-| [supabase.js](src/utils/supabase.js) | Supabase client, authentication, magic links |
-| [player-session.js](src/utils/player-session.js) | Player registration, score tracking, real-time leaderboard |
-
----
-
-##  Adding a New Level
-
-1. **Create level file** `src/levels/level11.js`:
-   ```javascript
-   export const level11 = {
-     tiles: [
-       [1, 1, 1],
-       [0, 0, 1],
-       [1, 1, 1],
-     ],
-     start: { x: 0, y: 0, z: 1, facing: 'E' },
-     goals: [{ x: 2, y: 2, z: 1 }],
-     maxCommands: 6,
-   };
-   ```
-
-2. **Register in** [src/levels/index.js](src/levels/index.js):
-   ```javascript
-   import { level11 } from './level11.js';
-   
-   export const levels = {
-     // ... existing levels
-     10: { data: level10, password: 'FIN', next: 11, prev: 9, ... },
-     11: { data: level11, password: 'NEW', next: null, prev: 10, 
-           name: 'New Level', description: 'Your description',
-           hints: ['move()', 'spin(r)'] },
-   };
-   ```
-
-3. **Test** at `/play.html?level=11` or `/play.html?password=NEW`
-
----
-
-##  Configuration
 
 ### Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `VITE_SUPABASE_URL` | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | Supabase anonymous key |
-
-### Vite Configuration
-
-[vite.config.js](vite.config.js) handles multi-page setup:
-- `index.html` – Landing page
-- `play.html` – Game page
-- `highscores.html` – Leaderboard
-
----
-
-##  Testing Checklist
-
-When making changes, verify:
-
-- [ ] All 10 levels load correctly via URL params
-- [ ] Password lookup works (case-insensitive)
-- [ ] Terminal commands parse correctly
-- [ ] Character animations are smooth
-- [ ] Sound toggle persists across page loads
-- [ ] Leaderboard updates after level completion
-- [ ] Mobile controls function properly
-- [ ] Previous/Next navigation works
-
----
-
-##  Scoring & Leaderboard
-
-### Score Calculation
-
+Create `.env`:
 ```
-Score = 100 + (maxCommands - actualCommands) × 10
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_anon_key
 ```
 
-- Base score: 100 points per level
-- Bonus: 10 points per command under the limit
-- Minimum: 100 points
+---
 
-### Best Score Tracking
+## Adding a New Level
 
-The system tracks the **best score per level**:
-- Replaying a level only updates if you beat your previous best
-- Total score = sum of best scores across all levels
-- Scores persist across sessions (stored in localStorage and synced to database)
+1. **Add level data** in [src/levels/levels-data.ts](src/levels/levels-data.ts):
+   ```typescript
+   export const level11: Level = {
+     width: 6,
+     height: 6,
+     start: { x: 0, y: 3 },
+     goals: [{ x: 5, y: 3 }],
+     tiles: [...],
+     allowJump: true,
+     levelNumber: 11
+   };
+   ```
 
-### Player Registration
+2. **Register in** [src/levels/index.ts](src/levels/index.ts):
+   ```typescript
+   import { level11 } from './levels-data';
+   
+   export const levels: Record<number, LevelInfo> = {
+     // ...
+     10: { ..., next: 11 },
+     11: { 
+       data: level11, 
+       password: 'NEW', 
+       next: null, 
+       prev: 10,
+       name: 'New Level',
+       description: 'Your description',
+       hints: ['move()', 'spin(r)']
+     }
+   };
+   ```
 
-1. After completing Level 1, players register with email + 3-char username
-2. Magic link sent for email verification
-3. Verified players appear on the real-time leaderboard
-4. Returning players can sign in with just their email (no magic link needed)
-5. Top 20 verified players displayed
+3. **Test** at `/play.html?level=11`
 
 ---
 
-##  Known Limitations
+## Testing
 
-1. **TypeScript ready** – tsconfig.json configured, migration pending
-2. **Modular CSS** – Split into 9 files in styles/
-3. **Unit tests** – Vitest configured with 29 passing tests
-4. **Canvas-only** – No DOM-based fallback for accessibility
+29 tests across 2 files:
+
+- **commands.test.ts** (15 tests) – Parser validation
+- **rules.test.ts** (14 tests) – Scoring, win conditions
+
+Run with: `npm test`
 
 ---
 
-##  Quick Reference
+## Deployment
 
-```bash
-# Start dev server
-npm run dev
+Automatic deployment to Vercel on push to main.
 
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
+**Configuration** in [vercel.json](vercel.json):
+```json
+{
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/$1" }
+  ]
+}
 ```
 
-**Useful URLs:**
-- Dev: `http://localhost:3000`
-- Level 1: `/play.html?password=MVE`
-- Level by password: `/play.html?password=JMP`
-- Highscores: `/highscores.html`
+---
+
+## URLs
+
+| Environment | URL |
+|-------------|-----|
+| Dev | `http://localhost:5173` |
+| Level 1 | `/play.html?password=MVE` |
+| By number | `/play.html?level=1` |
+| Leaderboard | `/highscores.html` |

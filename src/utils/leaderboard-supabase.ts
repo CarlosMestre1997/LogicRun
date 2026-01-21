@@ -1,17 +1,14 @@
 // Leaderboard management using Supabase
 // Supports both anonymous codes and authenticated email submissions
 
-import { getSupabaseClient, getCurrentUser, isAuthenticated } from './supabase.js';
+import type { LeaderboardEntry } from '../types';
+import { getSupabaseClient, getCurrentUser } from './supabase';
 
 /**
  * Save a score to the leaderboard
  * If authenticated, saves with email; otherwise uses display code
- * @param {string} code - Display name/code for the score
- * @param {number} totalScore - The total score to save
- * @param {string} [email] - Optional email (used if authenticated)
- * @returns {Promise<Array>} Updated leaderboard
  */
-export async function saveCumulativeScore(code, totalScore, email = null) {
+export async function saveCumulativeScore(code: string, totalScore: number, email: string | null = null): Promise<LeaderboardEntry[]> {
   const supabase = getSupabaseClient();
   if (!supabase) {
     console.error('Supabase client not available, falling back to localStorage');
@@ -29,7 +26,7 @@ export async function saveCumulativeScore(code, totalScore, email = null) {
       verified: !!user // Mark as verified if user is authenticated
     };
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('leaderboard')
       .insert([scoreData])
       .select();
@@ -49,11 +46,8 @@ export async function saveCumulativeScore(code, totalScore, email = null) {
 /**
  * Save authenticated score with email verification
  * Requires user to be logged in via magic link
- * @param {string} code - Display name for the leaderboard
- * @param {number} totalScore - The total score
- * @returns {Promise<{success: boolean, error?: string, leaderboard?: Array}>}
  */
-export async function saveAuthenticatedScore(code, totalScore) {
+export async function saveAuthenticatedScore(code: string, totalScore: number): Promise<{ success: boolean; error?: string; leaderboard?: LeaderboardEntry[] }> {
   const supabase = getSupabaseClient();
   if (!supabase) {
     return { success: false, error: 'Supabase not available' };
@@ -65,7 +59,7 @@ export async function saveAuthenticatedScore(code, totalScore) {
   }
 
   try {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('leaderboard')
       .insert([{
         code: code.toUpperCase(),
@@ -83,16 +77,14 @@ export async function saveAuthenticatedScore(code, totalScore) {
     const leaderboard = await getCumulativeLeaderboard();
     return { success: true, leaderboard };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: (error as Error).message };
   }
 }
 
 /**
  * Get the cumulative leaderboard
- * @param {boolean} verifiedOnly - If true, only return verified scores
- * @returns {Promise<Array>} Leaderboard entries
  */
-export async function getCumulativeLeaderboard(verifiedOnly = false) {
+export async function getCumulativeLeaderboard(verifiedOnly = false): Promise<LeaderboardEntry[]> {
   const supabase = getSupabaseClient();
   if (!supabase) {
     console.error('Supabase client not available, falling back to localStorage');
@@ -130,7 +122,7 @@ export async function getCumulativeLeaderboard(verifiedOnly = false) {
 }
 
 // Local storage fallback functions
-function saveCumulativeScoreLocal(code, totalScore) {
+function saveCumulativeScoreLocal(code: string, totalScore: number): LeaderboardEntry[] {
   const key = 'cumulative_leaderboard';
   const leaderboard = getCumulativeLeaderboardLocal();
   
@@ -147,31 +139,30 @@ function saveCumulativeScoreLocal(code, totalScore) {
   return topScores;
 }
 
-function getCumulativeLeaderboardLocal() {
+function getCumulativeLeaderboardLocal(): LeaderboardEntry[] {
   const key = 'cumulative_leaderboard';
   const data = localStorage.getItem(key);
   return data ? JSON.parse(data) : [];
 }
 
 // Get current run total score from localStorage (this stays local)
-export function getCurrentRunTotal() {
+export function getCurrentRunTotal(): number {
   const data = localStorage.getItem('current_run_total');
   return data ? parseInt(data, 10) : 0;
 }
 
 // Set current run total score
-export function setCurrentRunTotal(score) {
+export function setCurrentRunTotal(score: number): void {
   localStorage.setItem('current_run_total', score.toString());
 }
 
 // Add to current run total
-export function addToRunTotal(score) {
+export function addToRunTotal(score: number): void {
   const current = getCurrentRunTotal();
   setCurrentRunTotal(current + score);
 }
 
 // Reset current run total
-export function resetRunTotal() {
+export function resetRunTotal(): void {
   localStorage.removeItem('current_run_total');
 }
-

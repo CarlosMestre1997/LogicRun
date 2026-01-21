@@ -1,5 +1,7 @@
 // Modal management
-export function createPasswordModal(levels) {
+import type { ModalController, LevelInfo, RegistrationResult } from '../types';
+
+export function createPasswordModal(levels: Record<number, LevelInfo>): ModalController {
   const modal = document.createElement('div');
   modal.id = 'password-modal';
   modal.className = 'modal';
@@ -13,18 +15,18 @@ export function createPasswordModal(levels) {
     </div>
   `;
   
-  document.getElementById('modal-container').appendChild(modal);
+  document.getElementById('modal-container')?.appendChild(modal);
   
-  const closeBtn = modal.querySelector('.close');
-  const passwordSubmit = modal.querySelector('#password-submit');
-  const passwordInput = modal.querySelector('#password-input');
-  const errorDiv = modal.querySelector('#password-error');
+  const closeBtn = modal.querySelector('.close') as HTMLSpanElement;
+  const passwordSubmit = modal.querySelector('#password-submit') as HTMLButtonElement;
+  const passwordInput = modal.querySelector('#password-input') as HTMLInputElement;
+  const errorDiv = modal.querySelector('#password-error') as HTMLDivElement;
   
   closeBtn.onclick = () => {
     modal.style.display = 'none';
   };
   
-  window.onclick = (e) => {
+  window.onclick = (e: MouseEvent) => {
     if (e.target === modal) {
       modal.style.display = 'none';
     }
@@ -46,7 +48,7 @@ export function createPasswordModal(levels) {
     }
   };
   
-  passwordInput.addEventListener('keypress', (e) => {
+  passwordInput.addEventListener('keypress', (e: KeyboardEvent) => {
     if (e.key === 'Enter') {
       passwordSubmit.click();
     }
@@ -65,7 +67,7 @@ export function createPasswordModal(levels) {
   };
 }
 
-export function createIntroModal(levelNumber, onClose = null) {
+export function createIntroModal(levelNumber: number, onClose: (() => void) | null = null): HTMLDivElement | null {
   if (levelNumber !== 1) return null;
   
   const modal = document.createElement('div');
@@ -83,19 +85,19 @@ export function createIntroModal(levelNumber, onClose = null) {
     </div>
   `;
   
-  document.getElementById('modal-container').appendChild(modal);
+  document.getElementById('modal-container')?.appendChild(modal);
   
-  const closeBtn = modal.querySelector('#intro-close');
-  const celebrateImg = modal.querySelector('#intro-celebrate-img');
+  const closeBtn = modal.querySelector('#intro-close') as HTMLButtonElement;
+  const celebrateImg = modal.querySelector('#intro-celebrate-img') as HTMLImageElement;
   
-  const handleClose = () => {
+  const handleClose = (): void => {
     modal.style.display = 'none';
     if (onClose) onClose();
   };
   
   closeBtn.onclick = handleClose;
   
-  window.onclick = (e) => {
+  window.onclick = (e: MouseEvent) => {
     if (e.target === modal) {
       handleClose();
     }
@@ -103,7 +105,7 @@ export function createIntroModal(levelNumber, onClose = null) {
   
   // Animate the celebrate image
   if (celebrateImg) {
-    import('../render/animations.js').then(({ animateCelebrationImage }) => {
+    import('../render/animations').then(({ animateCelebrationImage }) => {
       celebrateImg.onload = () => {
         animateCelebrationImage(celebrateImg, 1500);
       };
@@ -118,10 +120,8 @@ export function createIntroModal(levelNumber, onClose = null) {
 
 /**
  * Create registration modal for capturing email + username after level 1
- * @param {function} onRegister - Callback when registration is submitted
- * @returns {object} Modal controller
  */
-export function createRegistrationModal(onRegister) {
+export function createRegistrationModal(onRegister: (email: string, username: string) => Promise<RegistrationResult>): ModalController {
   const modal = document.createElement('div');
   modal.id = 'registration-modal';
   modal.className = 'modal';
@@ -161,18 +161,19 @@ export function createRegistrationModal(onRegister) {
     </div>
   `;
   
-  document.getElementById('modal-container').appendChild(modal);
+  document.getElementById('modal-container')?.appendChild(modal);
   
-  const emailInput = modal.querySelector('#reg-email');
-  const usernameInput = modal.querySelector('#reg-username');
-  const errorDiv = modal.querySelector('#reg-error');
-  const submitBtn = modal.querySelector('#reg-submit');
-  const signInBtn = modal.querySelector('#reg-signin');
-  const skipBtn = modal.querySelector('#reg-skip');
+  const emailInput = modal.querySelector('#reg-email') as HTMLInputElement;
+  const usernameInput = modal.querySelector('#reg-username') as HTMLInputElement;
+  const errorDiv = modal.querySelector('#reg-error') as HTMLDivElement;
+  const submitBtn = modal.querySelector('#reg-submit') as HTMLButtonElement;
+  const signInBtn = modal.querySelector('#reg-signin') as HTMLButtonElement;
+  const skipBtn = modal.querySelector('#reg-skip') as HTMLButtonElement;
   
   // Auto-uppercase username
-  usernameInput.addEventListener('input', (e) => {
-    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  usernameInput.addEventListener('input', (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    target.value = target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
   });
   
   // Sign in for returning users - check if verified account exists
@@ -191,7 +192,7 @@ export function createRegistrationModal(onRegister) {
     
     try {
       // Import signInExistingPlayer to check if verified account exists
-      const { signInExistingPlayer } = await import('../utils/player-session.js');
+      const { signInExistingPlayer } = await import('../utils/player-session');
       const result = await signInExistingPlayer(email);
       
       if (result.success) {
@@ -203,7 +204,7 @@ export function createRegistrationModal(onRegister) {
         signInBtn.textContent = 'I already have an account';
       }
     } catch (error) {
-      errorDiv.textContent = error.message || 'An error occurred';
+      errorDiv.textContent = (error as Error).message || 'An error occurred';
       signInBtn.disabled = false;
       signInBtn.textContent = 'I already have an account';
     }
@@ -235,33 +236,39 @@ export function createRegistrationModal(onRegister) {
       
       if (result.success) {
         // Show verification pending message
-        modal.querySelector('.modal-content').innerHTML = `
-          <div class="modal-body modal-body--spacious">
-            <h2 class="modal-title">📧 Check Your Email!</h2>
-            <p class="modal-text--muted">
-              We sent a verification link to:<br>
-              <strong class="modal-text--highlight">${email}</strong>
-            </p>
-            <p class="modal-text--small">
-              Click the link in the email to verify your account.<br>
-              You can continue playing in the meantime!
-            </p>
-            <button id="reg-continue" class="modal-btn modal-btn--primary modal-btn--inline">
-              Continue Playing
-            </button>
-          </div>
-        `;
-        
-        modal.querySelector('#reg-continue').onclick = () => {
-          modal.style.display = 'none';
-        };
+        const modalContent = modal.querySelector('.modal-content');
+        if (modalContent) {
+          modalContent.innerHTML = `
+            <div class="modal-body modal-body--spacious">
+              <h2 class="modal-title">📧 Check Your Email!</h2>
+              <p class="modal-text--muted">
+                We sent a verification link to:<br>
+                <strong class="modal-text--highlight">${email}</strong>
+              </p>
+              <p class="modal-text--small">
+                Click the link in the email to verify your account.<br>
+                You can continue playing in the meantime!
+              </p>
+              <button id="reg-continue" class="modal-btn modal-btn--primary modal-btn--inline">
+                Continue Playing
+              </button>
+            </div>
+          `;
+          
+          const continueBtn = modal.querySelector('#reg-continue') as HTMLButtonElement;
+          if (continueBtn) {
+            continueBtn.onclick = () => {
+              modal.style.display = 'none';
+            };
+          }
+        }
       } else {
         errorDiv.textContent = result.error || 'Registration failed. Please try again.';
         submitBtn.disabled = false;
         submitBtn.textContent = 'Send Verification Email';
       }
     } catch (error) {
-      errorDiv.textContent = error.message || 'An error occurred';
+      errorDiv.textContent = (error as Error).message || 'An error occurred';
       submitBtn.disabled = false;
       submitBtn.textContent = 'Send Verification Email';
     }
@@ -272,10 +279,10 @@ export function createRegistrationModal(onRegister) {
   };
   
   // Enter key submits
-  emailInput.addEventListener('keypress', (e) => {
+  emailInput.addEventListener('keypress', (e: KeyboardEvent) => {
     if (e.key === 'Enter') usernameInput.focus();
   });
-  usernameInput.addEventListener('keypress', (e) => {
+  usernameInput.addEventListener('keypress', (e: KeyboardEvent) => {
     if (e.key === 'Enter') submitBtn.click();
   });
   
@@ -292,10 +299,8 @@ export function createRegistrationModal(onRegister) {
 
 /**
  * Create verification success modal
- * @param {string} username - The verified username
- * @returns {object} Modal controller
  */
-export function createVerificationSuccessModal(username) {
+export function createVerificationSuccessModal(username: string): HTMLDivElement {
   const modal = document.createElement('div');
   modal.id = 'verification-success-modal';
   modal.className = 'modal';
@@ -315,12 +320,15 @@ export function createVerificationSuccessModal(username) {
     </div>
   `;
   
-  document.getElementById('modal-container').appendChild(modal);
+  document.getElementById('modal-container')?.appendChild(modal);
   
-  modal.querySelector('#verify-continue').onclick = () => {
-    modal.style.display = 'none';
-    modal.remove();
-  };
+  const continueBtn = modal.querySelector('#verify-continue') as HTMLButtonElement;
+  if (continueBtn) {
+    continueBtn.onclick = () => {
+      modal.style.display = 'none';
+      modal.remove();
+    };
+  }
   
   return modal;
 }

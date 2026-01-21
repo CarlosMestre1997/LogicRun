@@ -1,7 +1,7 @@
 // Game rules: collisions, win/lose conditions
-import { isGoal, getGoalAt, getGoalHeight } from '../levels/helpers.js';
+import type { GameState, Level, Action, WhileAction } from '../types';
 
-export function checkWinCondition(state, level) {
+export function checkWinCondition(state: GameState, level: Level): boolean {
   // For single-goal levels, check if at the goal
   if (level.goals.length === 1) {
     const goal = level.goals[0];
@@ -32,12 +32,13 @@ export function checkWinCondition(state, level) {
 }
 
 // Count commands including loops (inner commands count, loop line counts as -1)
-export function countCommands(actions) {
+export function countCommands(actions: Action[]): number {
   let count = 0;
   for (const action of actions) {
     if (action.type === 'while') {
+      const whileAction = action as WhileAction;
       // Loop line counts as -1, inner commands count normally
-      count += countCommands(action.body) - 1;
+      count += countCommands(whileAction.body) - 1;
     } else {
       count++;
     }
@@ -45,8 +46,7 @@ export function countCommands(actions) {
   return count;
 }
 
-export function calculateScore(commandCount) {
+export function calculateScore(commandCount: number): number {
   // Score: 950 for 1 command, 900 for 2, 850 for 3, etc.
   return Math.max(100, 1000 - (commandCount * 50));
 }
-

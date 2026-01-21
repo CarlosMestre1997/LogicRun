@@ -1,13 +1,13 @@
 // Sound manager for game audio
-import { getAssetPath } from './assets.js';
+import { getAssetPath } from './assets';
 
 let soundEnabled = true;
-let backgroundMusic = null;
-let jumpSound = null;
-let spinSound = null;
+let backgroundMusic: HTMLAudioElement | null = null;
+let jumpSound: HTMLAudioElement | null = null;
+let spinSound: HTMLAudioElement | null = null;
 
 // Initialize sounds
-export function initSounds() {
+export function initSounds(): void {
   // Background music
   backgroundMusic = new Audio(getAssetPath('sounds/soundtrack.mp3'));
   backgroundMusic.loop = true;
@@ -15,7 +15,7 @@ export function initSounds() {
   
   // Track playback position for seamless transitions
   backgroundMusic.addEventListener('timeupdate', () => {
-    if (!backgroundMusic.paused) {
+    if (backgroundMusic && !backgroundMusic.paused) {
       sessionStorage.setItem('musicPosition', backgroundMusic.currentTime.toString());
       sessionStorage.setItem('musicTimestamp', Date.now().toString());
     }
@@ -31,7 +31,7 @@ export function initSounds() {
 }
 
 // Toggle sound on/off
-export function toggleSound() {
+export function toggleSound(): boolean {
   soundEnabled = !soundEnabled;
   
   if (!soundEnabled) {
@@ -68,12 +68,12 @@ export function toggleSound() {
 }
 
 // Get current sound state
-export function isSoundEnabled() {
+export function isSoundEnabled(): boolean {
   return soundEnabled;
 }
 
 // Load sound preference from localStorage
-export function loadSoundPreference() {
+export function loadSoundPreference(): void {
   const saved = localStorage.getItem('soundEnabled');
   if (saved !== null) {
     soundEnabled = saved === 'true';
@@ -81,7 +81,7 @@ export function loadSoundPreference() {
 }
 
 // Play background music (only if not already playing)
-export function playBackgroundMusic(forceStart = false) {
+export function playBackgroundMusic(forceStart = false): void {
   if (soundEnabled && backgroundMusic) {
     // Check if music is already playing to avoid restarting
     if (backgroundMusic.paused) {
@@ -100,7 +100,9 @@ export function playBackgroundMusic(forceStart = false) {
           backgroundMusic.currentTime = resumePosition % backgroundMusic.duration;
         } else {
           backgroundMusic.addEventListener('loadedmetadata', () => {
-            backgroundMusic.currentTime = resumePosition % backgroundMusic.duration;
+            if (backgroundMusic) {
+              backgroundMusic.currentTime = resumePosition % backgroundMusic.duration;
+            }
           }, { once: true });
         }
       } else if (forceStart) {
@@ -119,7 +121,7 @@ export function playBackgroundMusic(forceStart = false) {
 }
 
 // Stop background music
-export function stopBackgroundMusic() {
+export function stopBackgroundMusic(): void {
   if (backgroundMusic) {
     backgroundMusic.pause();
     backgroundMusic.currentTime = 0;
@@ -130,7 +132,7 @@ export function stopBackgroundMusic() {
 }
 
 // Save music position before page unload (for seamless transitions)
-export function saveMusicPosition() {
+export function saveMusicPosition(): void {
   if (backgroundMusic && !backgroundMusic.paused) {
     sessionStorage.setItem('musicPosition', backgroundMusic.currentTime.toString());
     sessionStorage.setItem('musicTimestamp', Date.now().toString());
@@ -138,7 +140,7 @@ export function saveMusicPosition() {
 }
 
 // Auto-start music on level load if it should be playing
-export function autoStartMusic() {
+export function autoStartMusic(): void {
   const shouldPlay = localStorage.getItem('musicPlaying') === 'true';
   if (shouldPlay && soundEnabled) {
     playBackgroundMusic();
@@ -146,32 +148,31 @@ export function autoStartMusic() {
 }
 
 // Play jump sound
-export function playJumpSound() {
+export function playJumpSound(): void {
   if (soundEnabled && jumpSound) {
     jumpSound.currentTime = 0; // Reset to start
-    jumpSound.play().catch(err => {
+    jumpSound.play().catch(() => {
       // Ignore play errors
     });
   }
 }
 
 // Play spin sound
-export function playSpinSound() {
+export function playSpinSound(): void {
   if (soundEnabled && spinSound) {
     spinSound.currentTime = 0; // Reset to start
-    spinSound.play().catch(err => {
+    spinSound.play().catch(() => {
       // Ignore play errors
     });
   }
 }
 
 // Play fall sound (reuse spin sound for now, or can be separate)
-export function playFallSound() {
+export function playFallSound(): void {
   if (soundEnabled && spinSound) {
     spinSound.currentTime = 0; // Reset to start
-    spinSound.play().catch(err => {
+    spinSound.play().catch(() => {
       // Ignore play errors
     });
   }
 }
-

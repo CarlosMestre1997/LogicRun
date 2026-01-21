@@ -1,17 +1,29 @@
 // Character (Startie) rendering - uses discrete grid coordinates
-import { facingToSprite } from '../engine/state.js';
-import { getAssetPath } from '../utils/assets.js';
+import type { GameState, AnimationState, GridInfo, SpriteVariant } from '../types';
+import { facingToSprite } from '../engine/state';
+import { getAssetPath } from '../utils/assets';
 
-const SPRITE_VARIANTS = ['rd', 'ru', 'lu', 'ld'];
+const SPRITE_VARIANTS: SpriteVariant[] = ['rd', 'ru', 'lu', 'ld'];
 
-const sprites = Object.fromEntries(SPRITE_VARIANTS.map(v => [v, new Image()]));
-const laptopSprites = Object.fromEntries(SPRITE_VARIANTS.map(v => [v, new Image()]));
+const sprites: Record<SpriteVariant, HTMLImageElement> = {
+  rd: new Image(),
+  ru: new Image(),
+  lu: new Image(),
+  ld: new Image()
+};
+
+const laptopSprites: Record<SpriteVariant, HTMLImageElement> = {
+  rd: new Image(),
+  ru: new Image(),
+  lu: new Image(),
+  ld: new Image()
+};
 
 let spritesLoaded = 0;
 let laptopSpritesLoaded = 0;
 const TOTAL_SPRITES = SPRITE_VARIANTS.length;
 
-function loadSpriteSet(spriteSet, prefix, onLoad) {
+function loadSpriteSet(spriteSet: Record<SpriteVariant, HTMLImageElement>, prefix: string, onLoad: (key: SpriteVariant) => void): void {
   SPRITE_VARIANTS.forEach(key => {
     const img = spriteSet[key];
     img.onload = () => onLoad(key);
@@ -28,11 +40,11 @@ function loadSpriteSet(spriteSet, prefix, onLoad) {
   });
 }
 
-export function loadSprites(callback) {
+export function loadSprites(callback: () => void): void {
   spritesLoaded = 0;
   laptopSpritesLoaded = 0;
   
-  const checkAllLoaded = () => {
+  const checkAllLoaded = (): void => {
     if (spritesLoaded === TOTAL_SPRITES && laptopSpritesLoaded === TOTAL_SPRITES && callback) {
       callback();
     }
@@ -49,17 +61,17 @@ export function loadSprites(callback) {
   });
 }
 
-export function drawStartie(ctx, state, gridInfo) {
+export function drawStartie(ctx: CanvasRenderingContext2D, state: GameState, gridInfo: GridInfo | null, animState: AnimationState | null = null): void {
   if (state.ghostVisible) return;
   
   if (!gridInfo) return;
   
   // Use animation position if available, otherwise use discrete state position
   // Only use animation values if they're valid (not undefined/null)
-  const displayX = (state.animX !== undefined && state.animX !== null) ? state.animX : state.x;
-  const displayY = (state.animY !== undefined && state.animY !== null) ? state.animY : state.y;
+  const displayX = (animState?.x !== undefined && animState?.x !== null) ? animState.x : state.x;
+  const displayY = (animState?.y !== undefined && animState?.y !== null) ? animState.y : state.y;
   // animZ is ONLY for jump animation (0-1 during jump), NOT for tile height
-  const jumpAnimationZ = (state.animZ !== undefined && state.animZ !== null) ? state.animZ : 0;
+  const jumpAnimationZ = (animState?.z !== undefined && animState?.z !== null) ? animState.z : 0;
   
   // Convert grid coordinates to isometric screen coordinates
   // Use the same offset calculation as the grid
@@ -102,14 +114,14 @@ export function drawStartie(ctx, state, gridInfo) {
     ctx.save();
     
     // Apply alpha if falling
-    if (state.animAlpha !== undefined) {
-      ctx.globalAlpha = state.animAlpha;
+    if (animState?.alpha !== undefined && animState?.alpha !== null) {
+      ctx.globalAlpha = animState.alpha;
     }
     
     // Apply rotation if spinning
-    if (state.animRotation !== undefined) {
+    if (animState?.rotation !== undefined && animState?.rotation !== null) {
       ctx.translate(pixelX, pixelY);
-      ctx.rotate((state.animRotation * Math.PI) / 180);
+      ctx.rotate((animState.rotation * Math.PI) / 180);
       ctx.drawImage(currentSprite, -spriteSize / 2, -spriteSize / 2, spriteSize, spriteSize);
     } else {
       ctx.drawImage(currentSprite, spriteX, spriteY, spriteSize, spriteSize);
@@ -119,6 +131,6 @@ export function drawStartie(ctx, state, gridInfo) {
   }
 }
 
-export function areSpritesLoaded() {
+export function areSpritesLoaded(): boolean {
   return spritesLoaded === TOTAL_SPRITES && laptopSpritesLoaded === TOTAL_SPRITES;
 }

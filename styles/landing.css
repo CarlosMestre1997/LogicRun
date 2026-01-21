@@ -247,6 +247,23 @@ section p {
   color: var(--gray);
   max-width: 700px;
 }
+.school-link {
+  margin-top: 16px;
+}
+
+.school-link a {
+  color: var(--pink);
+  text-decoration: underline;
+}
+/* School section link */
+.school-link {
+  margin-top: 16px;
+}
+
+.school-link a {
+  color: var(--pink);
+  text-decoration: underline;
+}
 
 /* Features Grid */
 .features {

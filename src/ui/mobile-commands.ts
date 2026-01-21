@@ -1,14 +1,16 @@
 // Mobile command palette (drag-and-drop interface)
-export function initMobileCommands(terminal, onCommandsChange) {
+import type { MobileCommandsController } from '../types';
+
+export function initMobileCommands(terminal: HTMLTextAreaElement, onCommandsChange: () => void): MobileCommandsController | null {
   const terminalDropZone = document.getElementById('terminal-drop-zone');
-  let commands = []; // Array to store dropped commands
+  let commands: string[] = []; // Array to store dropped commands
 
   // Check if mobile (touch device or small screen)
   const isMobileDevice = window.innerWidth <= 768 || ('ontouchstart' in window);
 
-  if (!isMobileDevice || !terminalDropZone) return;
+  if (!isMobileDevice || !terminalDropZone) return null;
 
-  function updateTerminalFromCommands() {
+  function updateTerminalFromCommands(): void {
     // Update textarea with commands
     if (terminal && commands.length > 0) {
       terminal.value = commands.map(cmd => `> ${cmd}`).join('\n');
@@ -17,13 +19,13 @@ export function initMobileCommands(terminal, onCommandsChange) {
     }
     
     // Update drop zone display
-    terminalDropZone.classList.toggle('empty', commands.length === 0);
-    terminalDropZone.innerHTML = '';
+    terminalDropZone!.classList.toggle('empty', commands.length === 0);
+    terminalDropZone!.innerHTML = '';
     
     commands.forEach((cmd, index) => {
       const chip = document.createElement('div');
       chip.className = 'command-chip';
-      chip.dataset.index = index;
+      chip.dataset.index = index.toString();
       
       // Check if command is spin(l) or spin(r) - these don't need parameter input
       const isSpinDirection = cmd === 'spin(l)' || cmd === 'spin(r)';
@@ -34,8 +36,8 @@ export function initMobileCommands(terminal, onCommandsChange) {
           <button class="remove-btn" data-index="${index}">×</button>
         `;
         
-        const removeBtn = chip.querySelector('.remove-btn');
-        removeBtn.onclick = (e) => {
+        const removeBtn = chip.querySelector('.remove-btn') as HTMLButtonElement;
+        removeBtn.onclick = (e: MouseEvent) => {
           e.stopPropagation();
           commands.splice(index, 1);
           updateTerminalFromCommands();
@@ -53,12 +55,13 @@ export function initMobileCommands(terminal, onCommandsChange) {
           <button class="remove-btn" data-index="${index}">×</button>
         `;
         
-        const paramInput = chip.querySelector('.command-param');
-        const removeBtn = chip.querySelector('.remove-btn');
+        const paramInput = chip.querySelector('.command-param') as HTMLInputElement;
+        const removeBtn = chip.querySelector('.remove-btn') as HTMLButtonElement;
         
-        paramInput.addEventListener('input', (e) => {
-          const newParam = e.target.value.replace(/[^0-9]/g, '');
-          e.target.value = newParam;
+        paramInput.addEventListener('input', (e: Event) => {
+          const target = e.target as HTMLInputElement;
+          const newParam = target.value.replace(/[^0-9]/g, '');
+          target.value = newParam;
           const newCmd = newParam ? `${baseCmd}(${newParam})` : `${baseCmd}()`;
           commands[index] = newCmd;
           updateTerminalFromCommands();
@@ -72,7 +75,7 @@ export function initMobileCommands(terminal, onCommandsChange) {
           updateTerminalFromCommands();
         });
         
-        chip.addEventListener('click', (e) => {
+        chip.addEventListener('click', (e: MouseEvent) => {
           if (e.target !== removeBtn && e.target !== paramInput) {
             paramInput.focus();
             setTimeout(() => paramInput.select(), 10);
@@ -83,7 +86,7 @@ export function initMobileCommands(terminal, onCommandsChange) {
           paramInput.select();
         });
         
-        removeBtn.onclick = (e) => {
+        removeBtn.onclick = (e: MouseEvent) => {
           e.stopPropagation();
           commands.splice(index, 1);
           updateTerminalFromCommands();
@@ -91,16 +94,16 @@ export function initMobileCommands(terminal, onCommandsChange) {
         };
       }
       
-      terminalDropZone.appendChild(chip);
+      terminalDropZone!.appendChild(chip);
     });
   }
 
   // Command palette functionality
-  const commandButtons = document.querySelectorAll('.command-btn');
+  const commandButtons = document.querySelectorAll('.command-btn') as NodeListOf<HTMLButtonElement>;
   
   commandButtons.forEach(btn => {
     // Primary method: tap/click to add
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', (e: MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
       const command = btn.dataset.command;
@@ -121,13 +124,13 @@ export function initMobileCommands(terminal, onCommandsChange) {
     let btnTouchStartX = 0;
     let btnIsDragging = false;
     
-    btn.addEventListener('touchstart', (e) => {
+    btn.addEventListener('touchstart', (e: TouchEvent) => {
       btnTouchStartY = e.touches[0].clientY;
       btnTouchStartX = e.touches[0].clientX;
       btnIsDragging = false;
     }, { passive: true });
     
-    btn.addEventListener('touchmove', (e) => {
+    btn.addEventListener('touchmove', (e: TouchEvent) => {
       const touchY = e.touches[0].clientY;
       const touchX = e.touches[0].clientX;
       const deltaY = Math.abs(touchY - btnTouchStartY);
@@ -143,29 +146,31 @@ export function initMobileCommands(terminal, onCommandsChange) {
       
       if (btnIsDragging && e.cancelable) {
         e.preventDefault();
-        const rect = terminalDropZone.getBoundingClientRect();
+        const rect = terminalDropZone!.getBoundingClientRect();
         if (touchY >= rect.top && touchY <= rect.bottom) {
-          terminalDropZone.style.borderColor = '#0f0';
+          terminalDropZone!.style.borderColor = '#0f0';
         } else {
-          terminalDropZone.style.borderColor = '#555';
+          terminalDropZone!.style.borderColor = '#555';
         }
       }
     }, { passive: false });
     
-    btn.addEventListener('touchend', (e) => {
+    btn.addEventListener('touchend', (e: TouchEvent) => {
       if (btnIsDragging) {
         btn.classList.remove('dragging');
         const touchY = e.changedTouches[0].clientY;
-        const rect = terminalDropZone.getBoundingClientRect();
+        const rect = terminalDropZone!.getBoundingClientRect();
         
         if (touchY >= rect.top && touchY <= rect.bottom) {
           const command = btn.dataset.command;
-          commands.push(command);
-          updateTerminalFromCommands();
-          if (onCommandsChange) onCommandsChange();
+          if (command) {
+            commands.push(command);
+            updateTerminalFromCommands();
+            if (onCommandsChange) onCommandsChange();
+          }
         }
         
-        terminalDropZone.style.borderColor = '#555';
+        terminalDropZone!.style.borderColor = '#555';
         if (e.cancelable) {
           e.preventDefault();
         }
@@ -179,7 +184,7 @@ export function initMobileCommands(terminal, onCommandsChange) {
   
   return {
     getCommands: () => commands.join('\n'),
-    setCommands: (newCommands) => {
+    setCommands: (newCommands: string[]) => {
       commands = newCommands;
       updateTerminalFromCommands();
     }

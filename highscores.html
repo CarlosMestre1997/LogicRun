@@ -20,16 +20,16 @@
   <div id="highscores-content">
     <h1>LEADERBOARD</h1>
     
-    <div id="player-status" style="margin-bottom: 20px; padding: 15px; background: var(--dark-gray); border-radius: 4px; display: none;">
-      <p style="margin: 0; color: #888; font-size: 14px;">
-        Playing as: <strong id="player-name" style="color: var(--pink);"></strong>
-        <span id="player-score" style="float: right;"></span>
+    <div id="player-status">
+      <p>
+        Playing as: <strong id="player-name"></strong>
+        <span id="player-score"></span>
       </p>
     </div>
     
     <div id="leaderboard-display">
       <div id="leaderboard-list">
-        <div style="color: #888; text-align: center; padding: 2rem;">Loading...</div>
+        <div class="leaderboard-loading">Loading...</div>
       </div>
     </div>
     
@@ -41,15 +41,15 @@
 </div>
 
 <script type="module">
-import { initSupabase, getCurrentUser } from '/src/utils/supabase.js';
+import { initSupabase, getCurrentUser } from '/src/utils/supabase.ts';
 import { 
   getPlayerSession, 
   subscribeToLeaderboard, 
   completeRegistration,
   hasPendingVerification,
   clearPlayerSession
-} from '/src/utils/player-session.js';
-import { saveMusicPosition } from '/src/utils/sounds.js';
+} from '/src/utils/player-session.ts';
+import { saveMusicPosition } from '/src/utils/sounds.ts';
 
 // Initialize
 initSupabase();
@@ -98,7 +98,7 @@ function updateLeaderboard(leaderboard) {
   leaderboardList.innerHTML = '';
   
   if (!leaderboard || leaderboard.length === 0) {
-    leaderboardList.innerHTML = '<p style="color: #888; text-align: center; padding: 2rem;">No scores yet. Be the first to play!</p>';
+    leaderboardList.innerHTML = '<p class="leaderboard-empty">No scores yet. Be the first to play!</p>';
     return;
   }
   
@@ -115,10 +115,12 @@ function updateLeaderboard(leaderboard) {
     else if (index === 1) medal = '🥈';
     else if (index === 2) medal = '🥉';
     
+    const codeClass = isCurrentPlayer ? 'highscore-code highscore-code--current' : 'highscore-code';
+    
     entryDiv.innerHTML = `
       <span class="highscore-rank">${medal || '#' + (index + 1)}</span>
-      <span class="highscore-code" ${isCurrentPlayer ? 'style="color: var(--pink); font-weight: bold;"' : ''}>${entry.username}</span>
-      <span class="highscore-level" style="color: #888; font-size: 0.8em;">Lv.${entry.current_level || '?'}</span>
+      <span class="${codeClass}">${entry.username}</span>
+      <span class="highscore-level">Lv.${entry.current_level || '?'}</span>
       <span class="highscore-score">${entry.score.toLocaleString()}</span>
     `;
     leaderboardList.appendChild(entryDiv);

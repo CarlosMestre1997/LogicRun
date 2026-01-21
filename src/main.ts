@@ -1,13 +1,14 @@
 // Main game initialization for play page
-import { createEngine, calculateScore, countCommands } from './engine/index.js';
-import { drawLevel, initRenderer } from './render/index.js';
-import { levels, getLevelByPassword, getLevelByNumber } from './levels/index.js';
-import { initSounds, loadSoundPreference, toggleSound, isSoundEnabled, playBackgroundMusic, saveMusicPosition } from './utils/sounds.js';
-import { initTerminal, getTerminalCommands } from './ui/terminal.js';
-import { initMobileCommands } from './ui/mobile-commands.js';
-import { createPasswordModal, createIntroModal, createRegistrationModal, createVerificationSuccessModal } from './ui/modals.js';
-import { initNavigation, navigateToNextLevel } from './ui/navigation.js';
-import { initSupabase, getCurrentUser } from './utils/supabase.js';
+import type { LevelEntry, LeaderboardEntry, GameState, AnimationState } from './types';
+import { createEngine, calculateScore, countCommands } from './engine/index';
+import { drawLevel, initRenderer } from './render/index';
+import { levels, getLevelByPassword, getLevelByNumber } from './levels/index';
+import { initSounds, loadSoundPreference, toggleSound, isSoundEnabled, playBackgroundMusic, saveMusicPosition } from './utils/sounds';
+import { initTerminal, getTerminalCommands } from './ui/terminal';
+import { initMobileCommands } from './ui/mobile-commands';
+import { createPasswordModal, createIntroModal, createRegistrationModal, createVerificationSuccessModal } from './ui/modals';
+import { initNavigation, navigateToNextLevel } from './ui/navigation';
+import { initSupabase, getCurrentUser } from './utils/supabase';
 import { 
   isPlayerRegistered, 
   getPlayerSession, 
@@ -16,11 +17,11 @@ import {
   completeRegistration,
   hasPendingVerification,
   subscribeToLeaderboard
-} from './utils/player-session.js';
-import { animateCelebration } from './render/animations.js';
+} from './utils/player-session';
+import { animateCelebration } from './render/animations';
 
 // Get level from URL: /play.html?level=1 or /play.html?password=JMP
-function getCurrentLevel() {
+function getCurrentLevel(): LevelEntry | null {
   const params = new URLSearchParams(window.location.search);
   
   const levelNum = params.get('level');
@@ -37,7 +38,7 @@ function getCurrentLevel() {
   return getLevelByNumber(1);
 }
 
-async function initGame() {
+async function initGame(): Promise<void> {
   const levelInfo = getCurrentLevel();
   if (!levelInfo) {
     window.location.href = '/index.html';
@@ -45,16 +46,18 @@ async function initGame() {
   }
   
   const level = levelInfo.data;
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
+  const canvas = document.getElementById('canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
   const engine = createEngine(level);
-  const status = document.getElementById('status');
-  const scoreDisplay = document.getElementById('score');
-  const terminal = document.getElementById('terminal');
+  const status = document.getElementById('status')!;
+  const scoreDisplay = document.getElementById('score')!;
+  const terminal = document.getElementById('terminal') as HTMLTextAreaElement;
   
   // Update UI with level info
-  document.getElementById('level-title').textContent = `Level ${levelInfo.number}`;
-  document.getElementById('level-password').textContent = `pass: ${levelInfo.password}`;
+  const levelTitle = document.getElementById('level-title');
+  const levelPassword = document.getElementById('level-password');
+  if (levelTitle) levelTitle.textContent = `Level ${levelInfo.number}`;
+  if (levelPassword) levelPassword.textContent = `pass: ${levelInfo.password}`;
   document.title = `Startie – Level ${levelInfo.number}`;
   
   // Initialize systems
@@ -72,10 +75,19 @@ async function initGame() {
   
   // Initialize modals
   const passwordModal = createPasswordModal(levels);
-  createIntroModal(levelInfo.number);
   
-  // Create registration modal (shown after level 1 completion)
+  // Create registration modal
   const registrationModal = createRegistrationModal(registerPlayer);
+  
+  // Show intro modal on level 1, then registration if not registered
+  if (levelInfo.number === 1) {
+    createIntroModal(levelInfo.number, () => {
+      // After intro closes, show registration if not already registered
+      if (!isPlayerRegistered()) {
+        registrationModal.show();
+      }
+    });
+  }
   
   // Navigation
   initNavigation(levelInfo);
@@ -87,12 +99,12 @@ async function initGame() {
   initSupabase();
   
   // Check if returning from email verification
-  async function checkVerification() {
+  async function checkVerification(): Promise<void> {
     if (hasPendingVerification()) {
       const { user } = await getCurrentUser();
       if (user) {
         const result = await completeRegistration();
-        if (result.success) {
+        if (result.success && result.player) {
           createVerificationSuccessModal(result.player.username);
         }
       }
@@ -101,16 +113,16 @@ async function initGame() {
   checkVerification();
   
   // Initialize highscores panel with real-time updates
-  let unsubscribeLeaderboard = null;
+  let unsubscribeLeaderboard: (() => void) | null = null;
   
-  function updateHighscoresPanel(leaderboard) {
+  function updateHighscoresPanel(leaderboard: LeaderboardEntry[]): void {
     const highscoresList = document.getElementById('highscores-list');
     if (!highscoresList) return;
     
     highscoresList.innerHTML = '';
     
     if (!leaderboard || leaderboard.length === 0) {
-      highscoresList.innerHTML = '<div style="color: #888; font-size: 0.8rem; text-align: center; padding: 1rem;">No scores yet</div>';
+      highscoresList.innerHTML = '<div class="highscore-empty">No scores yet</div>';
       return;
     }
     
@@ -121,9 +133,11 @@ async function initGame() {
       const entryDiv = document.createElement('div');
       entryDiv.className = 'highscore-entry';
       const isCurrentPlayer = session && entry.username === session.username;
+      const rankClass = index < 3 ? 'highscore-rank highscore-rank--top' : 'highscore-rank';
+      const codeClass = isCurrentPlayer ? 'highscore-code highscore-code--current' : 'highscore-code';
       entryDiv.innerHTML = `
-        <span class="highscore-rank" style="color: ${index < 3 ? 'var(--pink)' : '#888'}; margin-right: 8px;">#${index + 1}</span>
-        <span class="highscore-code" style="${isCurrentPlayer ? 'color: var(--pink); font-weight: bold;' : ''}">${entry.username}</span>
+        <span class="${rankClass}">#${index + 1}</span>
+        <span class="${codeClass}">${entry.username}</span>
         <span class="highscore-score">${entry.score.toLocaleString()}</span>
       `;
       highscoresList.appendChild(entryDiv);
@@ -141,8 +155,8 @@ async function initGame() {
   }
   
   // Sound toggle button
-  const soundToggle = document.getElementById('sound-toggle');
-  function updateSoundButton() {
+  const soundToggle = document.getElementById('sound-toggle') as HTMLButtonElement;
+  function updateSoundButton(): void {
     soundToggle.textContent = isSoundEnabled() ? '🔊' : '🔇';
     soundToggle.classList.toggle('muted', !isSoundEnabled());
   }
@@ -154,7 +168,7 @@ async function initGame() {
   };
   
   // Real-time score calculation
-  function updateScore() {
+  function updateScore(): void {
     const commandText = mobileCommands ? mobileCommands.getCommands() : getTerminalCommands(terminal);
     const lines = commandText.trim().split('\n').filter(l => l);
     
@@ -185,12 +199,12 @@ async function initGame() {
   
   // Initialize renderer
   initRenderer(() => {
-    drawLevel(ctx, level, engine.state);
+    drawLevel(ctx, level, engine.state, engine.animState);
   }, level);
-  drawLevel(ctx, level, engine.state);
+  drawLevel(ctx, level, engine.state, engine.animState);
   
   // Run button
-  const runButton = document.getElementById('run');
+  const runButton = document.getElementById('run') as HTMLButtonElement;
   runButton.onclick = () => {
     status.textContent = '';
     
@@ -212,7 +226,7 @@ async function initGame() {
       return;
     }
 
-    engine.execute(result.actions, s => drawLevel(ctx, level, s), s => {
+    engine.execute(result.actions, (s: GameState, animState: AnimationState) => drawLevel(ctx, level, s, animState), (s: GameState) => {
       if (s.failed) {
         status.textContent = 'Game Over — Try Again';
       } else {
@@ -225,7 +239,7 @@ async function initGame() {
           : s.visitedGoals.size >= level.goals.length;
         
         if (hasCompletedLevel) {
-          const commandCount = countCommands(result.actions);
+          const commandCount = countCommands(result.actions!);
           const score = calculateScore(commandCount);
           scoreDisplay.textContent = `SCORE: ${score}`;
           
@@ -233,29 +247,11 @@ async function initGame() {
           updatePlayerScore(score, levelInfo.number);
           
           status.textContent = '✓ Level Complete';
-          animateCelebration(s, (state) => drawLevel(ctx, level, state), 1500);
+          animateCelebration(s, (state: GameState) => drawLevel(ctx, level, state, engine.animState), 1500);
           
-          // After level 1, show registration modal if not registered
-          if (levelInfo.number === 1 && !isPlayerRegistered()) {
-            setTimeout(() => {
-              registrationModal.show();
-              // Add listener to continue after modal closes
-              const modal = document.getElementById('registration-modal');
-              const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                  if (mutation.attributeName === 'style' && modal.style.display === 'none') {
-                    observer.disconnect();
-                    setTimeout(() => navigateToNextLevel(levelInfo), 500);
-                  }
-                });
-              });
-              observer.observe(modal, { attributes: true });
-            }, 1800);
-          } else {
-            setTimeout(() => {
-              navigateToNextLevel(levelInfo);
-            }, 2000);
-          }
+          setTimeout(() => {
+            navigateToNextLevel(levelInfo);
+          }, 2000);
         } else {
           status.textContent = 'Try again';
         }

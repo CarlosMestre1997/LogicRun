@@ -1,5 +1,6 @@
 // Player session management - handles registration and score tracking
-import { getSupabaseClient, sendMagicLink, getCurrentUser, onAuthStateChange } from './supabase.js';
+import type { PlayerSession, PendingVerification, ScoreUpdateResult, RegistrationResult, LeaderboardEntry } from '../types';
+import { getSupabaseClient, sendMagicLink, getCurrentUser } from './supabase';
 
 const SESSION_KEY = 'logicrun_player';
 const PENDING_VERIFICATION_KEY = 'logicrun_pending_verification';
@@ -7,25 +8,23 @@ const LEVEL_SCORES_KEY = 'logicrun_level_scores';
 
 /**
  * Get current player session from localStorage
- * @returns {{email: string, username: string, score: number, level: number, verified: boolean} | null}
  */
-export function getPlayerSession() {
+export function getPlayerSession(): PlayerSession | null {
   const data = localStorage.getItem(SESSION_KEY);
   return data ? JSON.parse(data) : null;
 }
 
 /**
  * Save player session to localStorage
- * @param {object} session - Player session data
  */
-export function savePlayerSession(session) {
+export function savePlayerSession(session: PlayerSession): void {
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
 
 /**
  * Clear player session
  */
-export function clearPlayerSession() {
+export function clearPlayerSession(): void {
   localStorage.removeItem(SESSION_KEY);
   localStorage.removeItem(PENDING_VERIFICATION_KEY);
   localStorage.removeItem(LEVEL_SCORES_KEY);
@@ -35,20 +34,17 @@ export function clearPlayerSession() {
 
 /**
  * Check if player is registered (has email + username)
- * @returns {boolean}
  */
-export function isPlayerRegistered() {
+export function isPlayerRegistered(): boolean {
   const session = getPlayerSession();
-  return session !== null && session.email && session.username;
+  return session !== null && !!session.email && !!session.username;
 }
 
 /**
  * Sign in an existing verified player by email
  * Checks database for verified player and restores their session
- * @param {string} email - Player's email
- * @returns {Promise<{success: boolean, player?: object, error?: string}>}
  */
-export async function signInExistingPlayer(email) {
+export async function signInExistingPlayer(email: string): Promise<{ success: boolean; player?: PlayerSession; error?: string }> {
   const supabase = getSupabaseClient();
   if (!supabase) {
     return { success: false, error: 'Database not available' };
@@ -68,7 +64,7 @@ export async function signInExistingPlayer(email) {
     }
 
     // Restore session locally
-    const session = {
+    const session: PlayerSession = {
       email: data.email,
       username: data.username,
       score: data.score,
@@ -83,17 +79,14 @@ export async function signInExistingPlayer(email) {
 
     return { success: true, player: session };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: (error as Error).message };
   }
 }
 
 /**
  * Register a new player - sends magic link for email verification
- * @param {string} email - Player's email
- * @param {string} username - 3-character username
- * @returns {Promise<{success: boolean, error?: string}>}
  */
-export async function registerPlayer(email, username) {
+export async function registerPlayer(email: string, username: string): Promise<RegistrationResult> {
   if (!email || !username) {
     return { success: false, error: 'Email and username are required' };
   }
@@ -117,11 +110,12 @@ export async function registerPlayer(email, username) {
   }
 
   // Store pending registration
-  localStorage.setItem(PENDING_VERIFICATION_KEY, JSON.stringify({
+  const pendingData: PendingVerification = {
     email,
     username: username.toUpperCase(),
     timestamp: Date.now()
-  }));
+  };
+  localStorage.setItem(PENDING_VERIFICATION_KEY, JSON.stringify(pendingData));
 
   // Send magic link
   const result = await sendMagicLink(email);
@@ -136,15 +130,14 @@ export async function registerPlayer(email, username) {
 /**
  * Complete registration after email verification
  * Called when user returns from magic link
- * @returns {Promise<{success: boolean, player?: object, error?: string}>}
  */
-export async function completeRegistration() {
+export async function completeRegistration(): Promise<RegistrationResult> {
   const pending = localStorage.getItem(PENDING_VERIFICATION_KEY);
   if (!pending) {
     return { success: false, error: 'No pending registration found' };
   }
 
-  const { email, username } = JSON.parse(pending);
+  const { email, username } = JSON.parse(pending) as PendingVerification;
   const { user } = await getCurrentUser();
 
   if (!user || user.email !== email) {
@@ -159,7 +152,7 @@ export async function completeRegistration() {
   try {
     // Get level scores and calculate total
     const levelScoresData = localStorage.getItem(LEVEL_SCORES_KEY);
-    const levelScores = levelScoresData ? JSON.parse(levelScoresData) : {};
+    const levelScores: Record<string, number> = levelScoresData ? JSON.parse(levelScoresData) : {};
     const totalScore = Object.values(levelScores).reduce((sum, score) => sum + score, 0);
     const highestLevel = Object.keys(levelScores).length > 0 
       ? Math.max(...Object.keys(levelScores).map(Number)) 
@@ -187,7 +180,7 @@ export async function completeRegistration() {
     }
 
     // Save session locally
-    const session = {
+    const session: PlayerSession = {
       email: data.email,
       username: data.username,
       score: data.score,
@@ -202,44 +195,37 @@ export async function completeRegistration() {
 
     return { success: true, player: session };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: (error as Error).message };
   }
 }
 
 /**
  * Get best scores per level from localStorage
- * @returns {Object.<number, number>} Map of level number to best score
  */
-function getLevelScores() {
+function getLevelScores(): Record<number, number> {
   const data = localStorage.getItem(LEVEL_SCORES_KEY);
   return data ? JSON.parse(data) : {};
 }
 
 /**
  * Save level scores to localStorage
- * @param {Object.<number, number>} scores - Map of level number to best score
  */
-function saveLevelScores(scores) {
+function saveLevelScores(scores: Record<number, number>): void {
   localStorage.setItem(LEVEL_SCORES_KEY, JSON.stringify(scores));
 }
 
 /**
  * Calculate total score from best scores per level
- * @param {Object.<number, number>} levelScores - Map of level number to best score
- * @returns {number} Total score
  */
-function calculateTotalScore(levelScores) {
+function calculateTotalScore(levelScores: Record<number, number>): number {
   return Object.values(levelScores).reduce((sum, score) => sum + score, 0);
 }
 
 /**
  * Update player's score after completing a level
  * Only updates if the new score is better than previous best for that level
- * @param {number} levelScore - Score from the completed level
- * @param {number} levelNumber - Level that was completed
- * @returns {Promise<{success: boolean, newScore?: number, improved?: boolean, error?: string}>}
  */
-export async function updatePlayerScore(levelScore, levelNumber) {
+export async function updatePlayerScore(levelScore: number, levelNumber: number): Promise<ScoreUpdateResult> {
   // Get current best scores per level from localStorage
   const levelScores = getLevelScores();
   const previousBest = levelScores[levelNumber] || 0;
@@ -325,10 +311,8 @@ export async function updatePlayerScore(levelScore, levelNumber) {
 
 /**
  * Get the live leaderboard with real-time updates
- * @param {function} callback - Called with leaderboard data on updates
- * @returns {function} Unsubscribe function
  */
-export function subscribeToLeaderboard(callback) {
+export function subscribeToLeaderboard(callback: (leaderboard: LeaderboardEntry[]) => void): () => void {
   const supabase = getSupabaseClient();
   if (!supabase) {
     // Return empty leaderboard for offline mode
@@ -363,9 +347,8 @@ export function subscribeToLeaderboard(callback) {
 
 /**
  * Fetch current leaderboard
- * @returns {Promise<Array>}
  */
-export async function fetchLeaderboard() {
+export async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
   const supabase = getSupabaseClient();
   if (!supabase) {
     return [];
@@ -394,33 +377,30 @@ export async function fetchLeaderboard() {
 
 /**
  * Check if there's a pending verification to complete
- * @returns {boolean}
  */
-export function hasPendingVerification() {
+export function hasPendingVerification(): boolean {
   return localStorage.getItem(PENDING_VERIFICATION_KEY) !== null;
 }
 
 /**
  * Get pending verification data
- * @returns {{email: string, username: string} | null}
  */
-export function getPendingVerification() {
+export function getPendingVerification(): PendingVerification | null {
   const data = localStorage.getItem(PENDING_VERIFICATION_KEY);
   return data ? JSON.parse(data) : null;
 }
 
 /**
  * Get local score (for unregistered players)
- * @returns {number}
  */
-export function getLocalScore() {
+export function getLocalScore(): number {
   return parseInt(localStorage.getItem('local_score') || '0', 10);
 }
 
 /**
  * Clear local score
  */
-export function clearLocalScore() {
+export function clearLocalScore(): void {
   localStorage.removeItem('local_score');
   localStorage.removeItem('local_level');
 }

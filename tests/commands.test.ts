@@ -1,6 +1,6 @@
 // Tests for command parser
 import { describe, it, expect } from 'vitest';
-import { parse } from '../src/engine/commands.js';
+import { parse } from '../src/engine/commands';
 
 describe('Command Parser', () => {
   describe('move command', () => {
@@ -17,7 +17,7 @@ describe('Command Parser', () => {
     it('parses multiple move commands', () => {
       const result = parse('move()\nmove()\nmove()');
       expect(result.actions).toHaveLength(3);
-      expect(result.actions.every(a => a.type === 'move')).toBe(true);
+      expect(result.actions!.every(a => a.type === 'move')).toBe(true);
     });
   });
 
@@ -49,14 +49,14 @@ describe('Command Parser', () => {
     it('parses while(hacking) with body', () => {
       const result = parse('while(hacking) {\nmove()\n}');
       expect(result.actions).toHaveLength(1);
-      expect(result.actions[0].type).toBe('while');
-      expect(result.actions[0].condition).toBe('hacking');
-      expect(result.actions[0].body).toEqual([{ type: 'move', count: 1 }]);
+      expect(result.actions![0].type).toBe('while');
+      expect((result.actions![0] as { condition: string }).condition).toBe('hacking');
+      expect((result.actions![0] as { body: unknown[] }).body).toEqual([{ type: 'move', count: 1 }]);
     });
 
     it('parses while with multiple commands in body', () => {
       const result = parse('while(hacking) {\nmove()\nspin(r)\njump()\n}');
-      expect(result.actions[0].body).toHaveLength(3);
+      expect((result.actions![0] as { body: unknown[] }).body).toHaveLength(3);
     });
 
     it('returns error for unknown condition', () => {

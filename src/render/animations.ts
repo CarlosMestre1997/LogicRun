@@ -1,10 +1,11 @@
 // Celebration image
-import { getAssetPath } from '../utils/assets.js';
+import type { GameState, AnimationState, GridInfo, DrawFunction } from '../types';
+import { getAssetPath } from '../utils/assets';
 
-let celebrateSprite = null;
+let celebrateSprite: HTMLImageElement | null = null;
 let celebrateLoaded = false;
 
-export function loadCelebrateSprite(callback) {
+export function loadCelebrateSprite(callback?: () => void): void {
   if (celebrateLoaded && celebrateSprite) {
     if (callback) callback();
     return;
@@ -24,12 +25,12 @@ export function loadCelebrateSprite(callback) {
   }
 }
 
-export function isCelebrateLoaded() {
-  return celebrateLoaded && celebrateSprite && celebrateSprite.complete;
+export function isCelebrateLoaded(): boolean {
+  return celebrateLoaded && celebrateSprite !== null && celebrateSprite.complete;
 }
 
 // Animation effects (ghost, etc.)
-export function drawGhost(ctx, x, y) {
+export function drawGhost(ctx: CanvasRenderingContext2D, x: number, y: number): void {
   ctx.save();
   // Alpha should be set by caller before calling this function
   // If not set, default to 0.7
@@ -56,7 +57,7 @@ export function drawGhost(ctx, x, y) {
   ctx.restore();
 }
 
-export function drawGhostAtPosition(ctx, state, gridInfo) {
+export function drawGhostAtPosition(ctx: CanvasRenderingContext2D, state: GameState, gridInfo: GridInfo | null, animState: AnimationState | null = null): void {
   if (!state.ghostVisible) return;
   
   if (!gridInfo) return;
@@ -76,25 +77,26 @@ export function drawGhostAtPosition(ctx, state, gridInfo) {
   const ghostX = isoX + ISO_TILE_WIDTH / 2;  // Center horizontally
   
   // Initialize ghostY if not set (first time ghost becomes visible)
-  if (state.ghostY === undefined || state.ghostY === null) {
-    state.ghostY = tileTopY;
+  if (animState && (animState.ghostY === undefined || animState.ghostY === null)) {
+    animState.ghostY = tileTopY;
   }
   
-  const ghostY = state.ghostY;
+  const ghostY = animState?.ghostY ?? tileTopY;
+  const ghostAlpha = animState?.ghostAlpha ?? 1;
   
   // Only draw if ghostY is defined and valid
   if (ghostY !== undefined && ghostY !== null) {
     ctx.save();
-    // Apply alpha fade if ghostAlpha is set (multiply with base 0.7)
+    // Apply alpha fade (multiply with base 0.7)
     const baseAlpha = 0.7;
-    const fadeAlpha = state.ghostAlpha !== undefined ? state.ghostAlpha * baseAlpha : baseAlpha;
+    const fadeAlpha = ghostAlpha * baseAlpha;
     ctx.globalAlpha = fadeAlpha;
     drawGhost(ctx, ghostX, ghostY);
     ctx.restore();
   }
 }
 
-export function drawCelebration(ctx, state, gridInfo) {
+export function drawCelebration(ctx: CanvasRenderingContext2D, state: GameState, gridInfo: GridInfo | null): void {
   if (!state.celebrating || !celebrateLoaded || !celebrateSprite) return;
   
   if (!gridInfo) return;
@@ -129,8 +131,8 @@ export function drawCelebration(ctx, state, gridInfo) {
 }
 
 // Create or get celebration overlay element
-function getCelebrationOverlay() {
-  let overlay = document.getElementById('celebration-overlay');
+function getCelebrationOverlay(): HTMLDivElement {
+  let overlay = document.getElementById('celebration-overlay') as HTMLDivElement | null;
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'celebration-overlay';
@@ -168,11 +170,11 @@ function getCelebrationOverlay() {
 }
 
 // Animate celebration - call this function to start the celebration animation
-export function animateCelebration(state, draw, duration = 1500) {
+export function animateCelebration(state: GameState, _draw: DrawFunction, duration = 1500): void {
   if (!state) return;
   
   const overlay = getCelebrationOverlay();
-  const img = overlay.querySelector('#celebration-img');
+  const img = overlay.querySelector('#celebration-img') as HTMLImageElement | null;
   
   if (!img) return;
   
@@ -181,7 +183,7 @@ export function animateCelebration(state, draw, duration = 1500) {
   let scale = 0.3;
   let alpha = 0;
   img.style.transform = `scale(${scale})`;
-  img.style.opacity = alpha;
+  img.style.opacity = alpha.toString();
   
   // Set base size maintaining aspect ratio - make it bigger
   const baseWidth = 700;
@@ -192,7 +194,7 @@ export function animateCelebration(state, draw, duration = 1500) {
   const startTime = Date.now();
   const totalDuration = duration;
   
-  function animate() {
+  function animate(): void {
     const elapsed = Date.now() - startTime;
     const progress = Math.min(elapsed / totalDuration, 1);
     
@@ -219,8 +221,8 @@ export function animateCelebration(state, draw, duration = 1500) {
       alpha = 1.0 - ((progress - 0.7) / 0.3); // Fade out
     }
     
-    img.style.transform = `scale(${scale})`;
-    img.style.opacity = alpha;
+    img!.style.transform = `scale(${scale})`;
+    img!.style.opacity = alpha.toString();
     
     if (progress < 1) {
       requestAnimationFrame(animate);
@@ -234,19 +236,19 @@ export function animateCelebration(state, draw, duration = 1500) {
 }
 
 // Animate celebration image in intro modal or any element
-export function animateCelebrationImage(imgElement, duration = 1500) {
+export function animateCelebrationImage(imgElement: HTMLImageElement, duration = 1500): void {
   if (!imgElement) return;
   
   let scale = 0.3;
   let alpha = 0;
   imgElement.style.transform = `scale(${scale})`;
-  imgElement.style.opacity = alpha;
+  imgElement.style.opacity = alpha.toString();
   imgElement.style.transition = 'none';
   
   const startTime = Date.now();
   const totalDuration = duration;
   
-  function animate() {
+  function animate(): void {
     const elapsed = Date.now() - startTime;
     const progress = Math.min(elapsed / totalDuration, 1);
     
@@ -274,7 +276,7 @@ export function animateCelebrationImage(imgElement, duration = 1500) {
     }
     
     imgElement.style.transform = `scale(${scale})`;
-    imgElement.style.opacity = alpha;
+    imgElement.style.opacity = alpha.toString();
     
     if (progress < 1) {
       requestAnimationFrame(animate);
@@ -287,4 +289,3 @@ export function animateCelebrationImage(imgElement, duration = 1500) {
   
   animate();
 }
-

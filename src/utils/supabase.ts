@@ -1,12 +1,13 @@
 // Supabase client initialization and authentication
-import { createClient } from '@supabase/supabase-js';
+/// <reference types="vite/client" />
+import { createClient, SupabaseClient, User, AuthChangeEvent, Session } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
-let supabaseClient = null;
+let supabaseClient: SupabaseClient | null = null;
 
-export function initSupabase() {
+export function initSupabase(): SupabaseClient | null {
   if (supabaseClient) {
     return supabaseClient;
   }
@@ -26,7 +27,7 @@ export function initSupabase() {
   }
 }
 
-export function getSupabaseClient() {
+export function getSupabaseClient(): SupabaseClient | null {
   if (!supabaseClient) {
     return initSupabase();
   }
@@ -37,10 +38,8 @@ export function getSupabaseClient() {
 
 /**
  * Send a magic link to the user's email for passwordless authentication
- * @param {string} email - User's email address
- * @returns {Promise<{success: boolean, error?: string}>}
  */
-export async function sendMagicLink(email) {
+export async function sendMagicLink(email: string): Promise<{ success: boolean; error?: string }> {
   const supabase = getSupabaseClient();
   if (!supabase) {
     return { success: false, error: 'Supabase not available' };
@@ -60,15 +59,14 @@ export async function sendMagicLink(email) {
 
     return { success: true };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: (error as Error).message };
   }
 }
 
 /**
  * Get the current authenticated user
- * @returns {Promise<{user: object|null, error?: string}>}
  */
-export async function getCurrentUser() {
+export async function getCurrentUser(): Promise<{ user: User | null; error?: string }> {
   const supabase = getSupabaseClient();
   if (!supabase) {
     return { user: null, error: 'Supabase not available' };
@@ -83,15 +81,14 @@ export async function getCurrentUser() {
 
     return { user };
   } catch (error) {
-    return { user: null, error: error.message };
+    return { user: null, error: (error as Error).message };
   }
 }
 
 /**
  * Sign out the current user
- * @returns {Promise<{success: boolean, error?: string}>}
  */
-export async function signOut() {
+export async function signOut(): Promise<{ success: boolean; error?: string }> {
   const supabase = getSupabaseClient();
   if (!supabase) {
     return { success: false, error: 'Supabase not available' };
@@ -106,16 +103,14 @@ export async function signOut() {
 
     return { success: true };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: (error as Error).message };
   }
 }
 
 /**
  * Subscribe to auth state changes
- * @param {function} callback - Called with (event, session) when auth state changes
- * @returns {function} Unsubscribe function
  */
-export function onAuthStateChange(callback) {
+export function onAuthStateChange(callback: (event: AuthChangeEvent, session: Session | null) => void): () => void {
   const supabase = getSupabaseClient();
   if (!supabase) {
     return () => {};
@@ -127,11 +122,8 @@ export function onAuthStateChange(callback) {
 
 /**
  * Check if user is authenticated
- * @returns {Promise<boolean>}
  */
-export async function isAuthenticated() {
+export async function isAuthenticated(): Promise<boolean> {
   const { user } = await getCurrentUser();
   return user !== null;
 }
-
-

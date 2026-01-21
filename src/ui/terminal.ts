@@ -1,7 +1,7 @@
 // Terminal input handling
-export function initTerminal(terminal) {
+export function initTerminal(terminal: HTMLTextAreaElement): void {
   // Terminal input formatting
-  function formatTerminalLines() {
+  function formatTerminalLines(): void {
     const lines = terminal.value.split('\n');
     const formatted = lines.map(line => {
       const trimmed = line.trim();
@@ -18,7 +18,7 @@ export function initTerminal(terminal) {
   }
 
   // Handle Enter key - add > to new line
-  terminal.addEventListener('keydown', (e) => {
+  terminal.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       const start = terminal.selectionStart;
@@ -56,14 +56,14 @@ export function initTerminal(terminal) {
   terminal.addEventListener('input', formatTerminalLines);
 }
 
-export function getTerminalCommands(terminal) {
+export function getTerminalCommands(terminal: HTMLTextAreaElement): string {
   const lines = terminal.value.split('\n')
     .map(line => line.trim().replace(/^>\s*/, ''))
     .filter(text => text.length > 0);
   return lines.join('\n');
 }
 
-export function setTerminalContent(terminal, commands) {
+export function setTerminalContent(terminal: HTMLTextAreaElement, commands: string[]): void {
   const formatted = commands.map(cmd => `> ${cmd}`).join('\n');
   terminal.value = formatted;
 }

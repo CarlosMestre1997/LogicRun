@@ -1,11 +1,13 @@
 // Command parsing
-function parseCommand(line) {
+import type { Action, MoveAction, JumpAction, SpinAction, WhileAction, ParseResult, SpinDirection } from '../types';
+
+function parseCommand(line: string): Action[] | null {
   // Move command: move() or move(5)
   const moveMatch = line.match(/^move\((\d+)?\)$/);
   if (moveMatch) {
     const count = moveMatch[1] ? parseInt(moveMatch[1], 10) : 1;
     // Store as single action with count property for scoring
-    return [{ type: 'move', count: count }];
+    return [{ type: 'move', count: count } as MoveAction];
   }
   
   // Jump command: jump() or jump(3)
@@ -13,25 +15,26 @@ function parseCommand(line) {
   if (jumpMatch) {
     const count = jumpMatch[1] ? parseInt(jumpMatch[1], 10) : 1;
     // Store as single action with count property for scoring
-    return [{ type: 'jump', count: count }];
+    return [{ type: 'jump', count: count } as JumpAction];
   }
   
   // Spin command: spin(r) or spin(l)
   const spinMatch = line.match(/^spin\(([lr])\)$/);
   if (spinMatch) {
-    return [{ type: 'spin', direction: spinMatch[1] === 'r' ? 'right' : 'left' }];
+    const direction: SpinDirection = spinMatch[1] === 'r' ? 'right' : 'left';
+    return [{ type: 'spin', direction } as SpinAction];
   }
   
   return null;
 }
 
-export function parse(text) {
+export function parse(text: string): ParseResult {
   const lines = text.trim()
     .split('\n')
     .map(l => l.trim().replace(/^>\s*/, ''))
     .filter(l => l);
   
-  const actions = [];
+  const actions: Action[] = [];
   let i = 0;
   
   while (i < lines.length) {
@@ -46,7 +49,7 @@ export function parse(text) {
       }
       
       // Collect inner commands until closing brace
-      const innerCommands = [];
+      const innerCommands: Action[] = [];
       i++; // Skip the while line
       let braceCount = 1;
       
@@ -79,7 +82,7 @@ export function parse(text) {
         return { error: 'Unclosed while loop' };
       }
       
-      actions.push({ type: 'while', condition: 'hacking', body: innerCommands });
+      actions.push({ type: 'while', condition: 'hacking', body: innerCommands } as WhileAction);
       continue;
     }
     
@@ -102,4 +105,3 @@ export function parse(text) {
   
   return { actions };
 }
-

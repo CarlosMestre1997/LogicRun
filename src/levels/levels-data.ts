@@ -1,7 +1,8 @@
 // All level configurations - consolidated level data
 // Each level defines: grid dimensions, start position, goals, tiles, and optional laptop
+import type { Level } from '../types';
 
-export const level1 = {
+export const level1: Level = {
   width: 5,
   height: 5,
   start: { x: 0, y: 2 },
@@ -17,7 +18,7 @@ export const level1 = {
   levelNumber: 1
 };
 
-export const level2 = {
+export const level2: Level = {
   width: 5,
   height: 5,
   start: { x: 0, y: 2 },
@@ -33,7 +34,7 @@ export const level2 = {
   levelNumber: 2
 };
 
-export const level3 = {
+export const level3: Level = {
   width: 7,
   height: 7,
   start: { x: 0, y: 3 },
@@ -51,7 +52,7 @@ export const level3 = {
   levelNumber: 3
 };
 
-export const level4 = {
+export const level4: Level = {
   width: 5,
   height: 5,
   start: { x: 0, y: 2 },
@@ -67,7 +68,7 @@ export const level4 = {
   levelNumber: 4
 };
 
-export const level5 = {
+export const level5: Level = {
   width: 7,
   height: 7,
   start: { x: 0, y: 3 },
@@ -86,7 +87,7 @@ export const level5 = {
   levelNumber: 5
 };
 
-export const level6 = {
+export const level6: Level = {
   width: 6,
   height: 6,
   start: { x: 0, y: 5 },
@@ -103,7 +104,7 @@ export const level6 = {
   levelNumber: 6
 };
 
-export const level7 = {
+export const level7: Level = {
   width: 8,
   height: 7,
   start: { x: 0, y: 3 },
@@ -121,7 +122,7 @@ export const level7 = {
   levelNumber: 7
 };
 
-export const level8 = {
+export const level8: Level = {
   width: 9,
   height: 5,
   start: { x: 0, y: 4 },
@@ -138,7 +139,7 @@ export const level8 = {
   levelNumber: 8
 };
 
-export const level9 = {
+export const level9: Level = {
   width: 8,
   height: 7,
   start: { x: 0, y: 3 },
@@ -157,7 +158,7 @@ export const level9 = {
   levelNumber: 9
 };
 
-export const level10 = {
+export const level10: Level = {
   width: 8,
   height: 8,
   start: { x: 0, y: 7 },

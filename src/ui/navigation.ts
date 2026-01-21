@@ -1,12 +1,13 @@
 // Navigation buttons
-import { saveMusicPosition } from '../utils/sounds.js';
-import { levels } from '../levels/index.js';
+import type { LevelEntry } from '../types';
+import { saveMusicPosition } from '../utils/sounds';
+import { levels } from '../levels/index';
 
-export function initNavigation(levelInfo) {
+export function initNavigation(levelInfo: LevelEntry): void {
   const homeBtn = document.getElementById('home-btn');
-  const prevBtn = document.getElementById('prev-btn');
+  const prevBtn = document.getElementById('prev-btn') as HTMLButtonElement | null;
   const mobileHomeBtn = document.getElementById('mobile-home-btn');
-  const mobilePrevBtn = document.getElementById('mobile-prev-btn');
+  const mobilePrevBtn = document.getElementById('mobile-prev-btn') as HTMLButtonElement | null;
   
   // Home buttons
   if (homeBtn) {
@@ -48,7 +49,7 @@ export function initNavigation(levelInfo) {
   }
 }
 
-export function navigateToNextLevel(levelInfo) {
+export function navigateToNextLevel(levelInfo: LevelEntry): void {
   saveMusicPosition();
   if (levelInfo.next !== null) {
     const nextPassword = levels[levelInfo.next]?.password;
