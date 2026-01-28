@@ -152,6 +152,9 @@ async function initGame(): Promise<void> {
     
     if (!modal || !list || !continueBtn) return;
     
+    // Update button text based on whether there's a next level
+    continueBtn.textContent = levelInfo.next ? 'Continue to Next Level' : 'Go to Leaderboard';
+    
     list.innerHTML = '';
     
     if (latestLeaderboard.length === 0) {
