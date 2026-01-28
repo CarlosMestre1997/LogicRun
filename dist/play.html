@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Startie – Logic Run</title>
-  <script type="module" crossorigin src="/assets/play-DbPgcTRB.js"></script>
-  <link rel="modulepreload" crossorigin href="/assets/player-session-ClSL65jB.js">
-  <link rel="stylesheet" crossorigin href="/assets/player-session-DT6q6ePP.css">
+  <script type="module" crossorigin src="/assets/play-B6DJFAVc.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/player-session-ByJdNHbg.js">
+  <link rel="stylesheet" crossorigin href="/assets/player-session-lc5cSOEg.css">
 </head>
 <body>
   <div id="top-banner">
@@ -72,6 +72,19 @@
     <button class="command-btn" draggable="true" data-command="spin(l)">spin(l)</button>
     <button class="command-btn" draggable="true" data-command="spin(r)">spin(r)</button>
     <button class="command-btn" draggable="true" data-command="jump()">jump()</button>
+  </div>
+
+  <!-- Mobile Highscores Modal (shown after level complete) -->
+  <div id="mobile-highscores-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-body">
+        <h2 class="modal-title">🏆 Leaderboard</h2>
+        <div id="mobile-highscores-list"></div>
+        <button id="mobile-highscores-continue" class="modal-btn modal-btn--primary">
+          Continue to Next Level
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Modals container -->

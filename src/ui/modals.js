@@ -130,7 +130,7 @@ export function createRegistrationModal(onRegister) {
       <div class="modal-body">
         <h2 class="modal-title modal-title--tight">Join the Leaderboard!</h2>
         <p class="modal-text--muted">
-          Register to compete with other players!<br>
+          Enter your email to compete with other players!<br>
           Your scores will update in real-time as you progress.
         </p>
         
@@ -147,15 +147,7 @@ export function createRegistrationModal(onRegister) {
         <div id="reg-error" class="form-error"></div>
         
         <button id="reg-submit" class="modal-btn modal-btn--primary">
-          Send Verification Email
-        </button>
-        
-        <button id="reg-signin" class="modal-btn modal-btn--secondary">
-          I already have an account
-        </button>
-        
-        <button id="reg-skip" class="modal-btn modal-btn--tertiary">
-          Play without registering
+          Start Playing
         </button>
       </div>
     </div>
@@ -167,47 +159,11 @@ export function createRegistrationModal(onRegister) {
   const usernameInput = modal.querySelector('#reg-username');
   const errorDiv = modal.querySelector('#reg-error');
   const submitBtn = modal.querySelector('#reg-submit');
-  const signInBtn = modal.querySelector('#reg-signin');
-  const skipBtn = modal.querySelector('#reg-skip');
   
   // Auto-uppercase username
   usernameInput.addEventListener('input', (e) => {
     e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
   });
-  
-  // Sign in for returning users - check if verified account exists
-  signInBtn.onclick = async () => {
-    const email = emailInput.value.trim();
-    
-    errorDiv.textContent = '';
-    
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      errorDiv.textContent = 'Please enter your email address above';
-      return;
-    }
-    
-    signInBtn.disabled = true;
-    signInBtn.textContent = 'Checking...';
-    
-    try {
-      // Import signInExistingPlayer to check if verified account exists
-      const { signInExistingPlayer } = await import('../utils/player-session.js');
-      const result = await signInExistingPlayer(email);
-      
-      if (result.success) {
-        // Account found and session restored - close modal and continue
-        modal.style.display = 'none';
-      } else {
-        errorDiv.textContent = result.error || 'No verified account found with this email';
-        signInBtn.disabled = false;
-        signInBtn.textContent = 'I already have an account';
-      }
-    } catch (error) {
-      errorDiv.textContent = error.message || 'An error occurred';
-      signInBtn.disabled = false;
-      signInBtn.textContent = 'I already have an account';
-    }
-  };
   
   submitBtn.onclick = async () => {
     const email = emailInput.value.trim();
@@ -215,7 +171,7 @@ export function createRegistrationModal(onRegister) {
     
     errorDiv.textContent = '';
     
-    // Validate email
+    // Validate email format
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       errorDiv.textContent = 'Please enter a valid email address';
       return;
@@ -228,47 +184,24 @@ export function createRegistrationModal(onRegister) {
     }
     
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Sending...';
+    submitBtn.textContent = 'Starting...';
     
     try {
       const result = await onRegister(email, username);
       
       if (result.success) {
-        // Show verification pending message
-        modal.querySelector('.modal-content').innerHTML = `
-          <div class="modal-body modal-body--spacious">
-            <h2 class="modal-title">📧 Check Your Email!</h2>
-            <p class="modal-text--muted">
-              We sent a verification link to:<br>
-              <strong class="modal-text--highlight">${email}</strong>
-            </p>
-            <p class="modal-text--small">
-              Click the link in the email to verify your account.<br>
-              You can continue playing in the meantime!
-            </p>
-            <button id="reg-continue" class="modal-btn modal-btn--primary modal-btn--inline">
-              Continue Playing
-            </button>
-          </div>
-        `;
-        
-        modal.querySelector('#reg-continue').onclick = () => {
-          modal.style.display = 'none';
-        };
+        // Registration successful - close modal and start playing
+        modal.style.display = 'none';
       } else {
         errorDiv.textContent = result.error || 'Registration failed. Please try again.';
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Send Verification Email';
+        submitBtn.textContent = 'Start Playing';
       }
     } catch (error) {
       errorDiv.textContent = error.message || 'An error occurred';
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Send Verification Email';
+      submitBtn.textContent = 'Start Playing';
     }
-  };
-  
-  skipBtn.onclick = () => {
-    modal.style.display = 'none';
   };
   
   // Enter key submits
@@ -288,39 +221,4 @@ export function createRegistrationModal(onRegister) {
       modal.style.display = 'none';
     }
   };
-}
-
-/**
- * Create verification success modal
- * @param {string} username - The verified username
- * @returns {object} Modal controller
- */
-export function createVerificationSuccessModal(username) {
-  const modal = document.createElement('div');
-  modal.id = 'verification-success-modal';
-  modal.className = 'modal';
-  modal.style.display = 'block';
-  modal.innerHTML = `
-    <div class="modal-content">
-      <div class="modal-body modal-body--spacious">
-        <h2 class="modal-title">✅ Verified!</h2>
-        <p class="modal-text--muted">
-          Welcome, <strong class="modal-text--accent">${username}</strong>!<br>
-          Your scores will now appear on the leaderboard.
-        </p>
-        <button id="verify-continue" class="modal-btn modal-btn--primary modal-btn--inline">
-          Continue
-        </button>
-      </div>
-    </div>
-  `;
-  
-  document.getElementById('modal-container').appendChild(modal);
-  
-  modal.querySelector('#verify-continue').onclick = () => {
-    modal.style.display = 'none';
-    modal.remove();
-  };
-  
-  return modal;
 }

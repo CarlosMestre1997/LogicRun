@@ -41,13 +41,10 @@
 </div>
 
 <script type="module">
-import { initSupabase, getCurrentUser } from '/src/utils/supabase.ts';
+import { initSupabase } from '/src/utils/supabase.ts';
 import { 
   getPlayerSession, 
-  subscribeToLeaderboard, 
-  completeRegistration,
-  hasPendingVerification,
-  clearPlayerSession
+  subscribeToLeaderboard
 } from '/src/utils/player-session.ts';
 import { saveMusicPosition } from '/src/utils/sounds.ts';
 
@@ -58,25 +55,6 @@ const leaderboardList = document.getElementById('leaderboard-list');
 const playerStatus = document.getElementById('player-status');
 const playerName = document.getElementById('player-name');
 const playerScore = document.getElementById('player-score');
-
-// Check if returning from email verification
-async function checkVerification() {
-  if (hasPendingVerification()) {
-    const { user } = await getCurrentUser();
-    if (user) {
-      const result = await completeRegistration();
-      if (result.success) {
-        showPlayerStatus(result.player);
-        // Show success message
-        const successDiv = document.createElement('div');
-        successDiv.style.cssText = 'background: #2d4a2d; color: #4caf50; padding: 15px; margin-bottom: 20px; border-radius: 4px; text-align: center;';
-        successDiv.innerHTML = `✅ Email verified! Welcome, <strong>${result.player.username}</strong>!`;
-        document.getElementById('highscores-content').insertBefore(successDiv, playerStatus);
-        setTimeout(() => successDiv.remove(), 5000);
-      }
-    }
-  }
-}
 
 // Show current player status
 function showPlayerStatus(session) {
@@ -129,9 +107,6 @@ function updateLeaderboard(leaderboard) {
 
 // Subscribe to real-time updates
 const unsubscribe = subscribeToLeaderboard(updateLeaderboard);
-
-// Check verification on load
-checkVerification();
 
 // Navigation
 document.getElementById('home-btn-highscore').onclick = () => {

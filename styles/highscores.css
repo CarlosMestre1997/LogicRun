@@ -46,7 +46,7 @@
 }
 
 .highscore-code--current {
-  color: var(--pink);
+  color: var(--white);
   font-weight: bold;
 }
 

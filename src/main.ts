@@ -6,16 +6,14 @@ import { levels, getLevelByPassword, getLevelByNumber } from './levels/index';
 import { initSounds, loadSoundPreference, toggleSound, isSoundEnabled, playBackgroundMusic, saveMusicPosition } from './utils/sounds';
 import { initTerminal, getTerminalCommands } from './ui/terminal';
 import { initMobileCommands } from './ui/mobile-commands';
-import { createPasswordModal, createIntroModal, createRegistrationModal, createVerificationSuccessModal } from './ui/modals';
+import { createPasswordModal, createIntroModal, createRegistrationModal } from './ui/modals';
 import { initNavigation, navigateToNextLevel } from './ui/navigation';
-import { initSupabase, getCurrentUser } from './utils/supabase';
+import { initSupabase } from './utils/supabase';
 import { 
   isPlayerRegistered, 
   getPlayerSession, 
   registerPlayer, 
   updatePlayerScore, 
-  completeRegistration,
-  hasPendingVerification,
   subscribeToLeaderboard
 } from './utils/player-session';
 import { animateCelebration } from './render/animations';
@@ -98,24 +96,18 @@ async function initGame(): Promise<void> {
   // Initialize Supabase
   initSupabase();
   
-  // Check if returning from email verification
-  async function checkVerification(): Promise<void> {
-    if (hasPendingVerification()) {
-      const { user } = await getCurrentUser();
-      if (user) {
-        const result = await completeRegistration();
-        if (result.success && result.player) {
-          createVerificationSuccessModal(result.player.username);
-        }
-      }
-    }
-  }
-  checkVerification();
+  // Check if on mobile
+  const isMobile = window.innerWidth <= 768 || ('ontouchstart' in window);
+  
+  // Store latest leaderboard for mobile modal
+  let latestLeaderboard: LeaderboardEntry[] = [];
   
   // Initialize highscores panel with real-time updates
   let unsubscribeLeaderboard: (() => void) | null = null;
   
   function updateHighscoresPanel(leaderboard: LeaderboardEntry[]): void {
+    latestLeaderboard = leaderboard; // Store for mobile modal
+    
     const highscoresList = document.getElementById('highscores-list');
     if (!highscoresList) return;
     
@@ -142,6 +134,43 @@ async function initGame(): Promise<void> {
       `;
       highscoresList.appendChild(entryDiv);
     });
+  }
+  
+  // Show mobile highscores modal
+  function showMobileHighscores(onContinue: () => void): void {
+    const modal = document.getElementById('mobile-highscores-modal');
+    const list = document.getElementById('mobile-highscores-list');
+    const continueBtn = document.getElementById('mobile-highscores-continue');
+    
+    if (!modal || !list || !continueBtn) return;
+    
+    list.innerHTML = '';
+    
+    if (latestLeaderboard.length === 0) {
+      list.innerHTML = '<div class="highscore-empty">No scores yet</div>';
+    } else {
+      const session = getPlayerSession();
+      latestLeaderboard.forEach((entry, index) => {
+        const entryDiv = document.createElement('div');
+        entryDiv.className = 'highscore-entry';
+        const isCurrentPlayer = session && entry.username === session.username;
+        const rankClass = index < 3 ? 'highscore-rank highscore-rank--top' : 'highscore-rank';
+        const codeClass = isCurrentPlayer ? 'highscore-code highscore-code--current' : 'highscore-code';
+        entryDiv.innerHTML = `
+          <span class="${rankClass}">#${index + 1}</span>
+          <span class="${codeClass}">${entry.username}</span>
+          <span class="highscore-score">${entry.score.toLocaleString()}</span>
+        `;
+        list.appendChild(entryDiv);
+      });
+    }
+    
+    modal.style.display = 'block';
+    
+    continueBtn.onclick = () => {
+      modal.style.display = 'none';
+      onContinue();
+    };
   }
   
   // Subscribe to real-time leaderboard updates
@@ -249,9 +278,18 @@ async function initGame(): Promise<void> {
           status.textContent = '✓ Level Complete';
           animateCelebration(s, (state: GameState) => drawLevel(ctx, level, state, engine.animState), 1500);
           
-          setTimeout(() => {
-            navigateToNextLevel(levelInfo);
-          }, 2000);
+          // On mobile, show highscores modal before navigating
+          if (isMobile) {
+            setTimeout(() => {
+              showMobileHighscores(() => {
+                navigateToNextLevel(levelInfo);
+              });
+            }, 1800);
+          } else {
+            setTimeout(() => {
+              navigateToNextLevel(levelInfo);
+            }, 2000);
+          }
         } else {
           status.textContent = 'Try again';
         }

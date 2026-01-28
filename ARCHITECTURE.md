@@ -186,16 +186,16 @@ export const level1: Level = {
 
 1. **Level 1 loads** → Intro modal appears
 2. **"Let's Go!" clicked** → Registration modal (if not registered)
-3. **Register/Skip** → Game begins
+3. **Enter email + username** → Game begins immediately
 4. **Complete level** → Score saved, navigate to next level
 5. **Leaderboard** → Real-time updates via Supabase subscription
 
 ### Registration
 
-- Email + 3-character username
-- Magic link verification email
-- Returning users sign in with email only (no magic link)
-- Top 20 verified players on leaderboard
+- Email (validated format) + 3-character username
+- Instant registration, no verification required
+- Returning users are recognized by email
+- Top 20 players on leaderboard
 
 ---
 

@@ -120,9 +120,11 @@
 
   #terminal-container {
     flex: 1 1 auto;
-    min-height: 150px;
+    min-height: 100px;
+    max-height: 30vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
 
   #terminal {
@@ -133,9 +135,14 @@
 
   #run {
     flex-shrink: 0;
-    padding: 0.5rem;
-    font-size: 0.85rem;
-    margin-top: 0.25rem;
+    padding: 0.75rem;
+    font-size: 1rem;
+    font-weight: bold;
+    margin-top: 0.5rem;
+    background: var(--pink);
+    color: var(--black);
+    border: none;
+    border-radius: 4px;
   }
 
   #status {
@@ -143,6 +150,7 @@
     font-size: 0.75rem;
     padding: 0.3rem;
     min-height: 1rem;
+    margin-bottom: 0.25rem;
   }
 
   #highscores-panel {
@@ -364,6 +372,7 @@
     background: var(--ui-gray);
     border-top: 2px solid #555;
     padding: 0.75rem;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
@@ -396,9 +405,64 @@
     opacity: 0.5;
   }
 
-  /* Adjust UI area to account for command palette */
+  /* Adjust UI area to account for command palette and safe areas */
   #ui {
-    padding-bottom: 80px;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Ensure run button is always visible */
+  #run {
+    position: sticky;
+    bottom: 0;
+    z-index: 50;
+    margin-top: auto;
+    margin-bottom: 0.5rem;
+    background: var(--pink);
+  }
+
+  /* Mobile highscores modal */
+  #mobile-highscores-modal {
+    display: none;
+  }
+
+  #mobile-highscores-modal.show {
+    display: block;
+  }
+
+  #mobile-highscores-modal .modal-content {
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  #mobile-highscores-modal .highscore-entry {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem;
+    font-family: 'Courier New', monospace;
+    border-bottom: 1px solid #333;
+  }
+
+  #mobile-highscores-modal .highscore-rank {
+    color: #888;
+    width: 30px;
+  }
+
+  #mobile-highscores-modal .highscore-rank--top {
+    color: var(--pink);
+  }
+
+  #mobile-highscores-modal .highscore-code {
+    flex: 1;
+    color: var(--white);
+  }
+
+  #mobile-highscores-modal .highscore-code--current {
+    color: var(--white);
+    font-weight: bold;
+  }
+
+  #mobile-highscores-modal .highscore-score {
+    color: var(--pink);
   }
 }
 

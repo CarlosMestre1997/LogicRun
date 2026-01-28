@@ -1,6 +1,6 @@
 // Player session management - handles registration and score tracking
 import type { PlayerSession, PendingVerification, ScoreUpdateResult, RegistrationResult, LeaderboardEntry } from '../types';
-import { getSupabaseClient, sendMagicLink, getCurrentUser } from './supabase';
+import { getSupabaseClient } from './supabase';
 
 const SESSION_KEY = 'logicrun_player';
 const PENDING_VERIFICATION_KEY = 'logicrun_pending_verification';
@@ -84,7 +84,7 @@ export async function signInExistingPlayer(email: string): Promise<{ success: bo
 }
 
 /**
- * Register a new player - sends magic link for email verification
+ * Register a new player - saves directly to database (no verification required)
  */
 export async function registerPlayer(email: string, username: string): Promise<RegistrationResult> {
   if (!email || !username) {
@@ -95,108 +95,98 @@ export async function registerPlayer(email: string, username: string): Promise<R
     return { success: false, error: 'Username must be exactly 3 alphanumeric characters' };
   }
 
-  // Check if username is already taken
   const supabase = getSupabaseClient();
+  
   if (supabase) {
-    const { data: existing } = await supabase
+    // Check if username is already taken by a different email
+    const { data: existingUsername } = await supabase
       .from('players')
-      .select('username')
+      .select('username, email')
       .eq('username', username.toUpperCase())
       .single();
 
-    if (existing) {
+    if (existingUsername && existingUsername.email !== email.toLowerCase()) {
       return { success: false, error: 'Username already taken. Choose another.' };
     }
-  }
 
-  // Store pending registration
-  const pendingData: PendingVerification = {
-    email,
-    username: username.toUpperCase(),
-    timestamp: Date.now()
-  };
-  localStorage.setItem(PENDING_VERIFICATION_KEY, JSON.stringify(pendingData));
-
-  // Send magic link
-  const result = await sendMagicLink(email);
-  
-  if (!result.success) {
-    return { success: false, error: result.error || 'Failed to send verification email' };
-  }
-
-  return { success: true };
-}
-
-/**
- * Complete registration after email verification
- * Called when user returns from magic link
- */
-export async function completeRegistration(): Promise<RegistrationResult> {
-  const pending = localStorage.getItem(PENDING_VERIFICATION_KEY);
-  if (!pending) {
-    return { success: false, error: 'No pending registration found' };
-  }
-
-  const { email, username } = JSON.parse(pending) as PendingVerification;
-  const { user } = await getCurrentUser();
-
-  if (!user || user.email !== email) {
-    return { success: false, error: 'Email verification failed' };
-  }
-
-  const supabase = getSupabaseClient();
-  if (!supabase) {
-    return { success: false, error: 'Database not available' };
-  }
-
-  try {
-    // Get level scores and calculate total
-    const levelScoresData = localStorage.getItem(LEVEL_SCORES_KEY);
-    const levelScores: Record<string, number> = levelScoresData ? JSON.parse(levelScoresData) : {};
-    const totalScore = Object.values(levelScores).reduce((sum, score) => sum + score, 0);
-    const highestLevel = Object.keys(levelScores).length > 0 
-      ? Math.max(...Object.keys(levelScores).map(Number)) 
-      : 1;
-
-    // Create or update player in database
-    const { data, error } = await supabase
+    // Check if email already exists (returning player)
+    const { data: existingEmail } = await supabase
       .from('players')
-      .upsert({
-        email: email,
-        username: username,
-        user_id: user.id,
-        score: totalScore,
-        current_level: highestLevel,
-        verified: true,
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'email'
-      })
-      .select()
+      .select('*')
+      .eq('email', email.toLowerCase())
       .single();
 
-    if (error) {
-      return { success: false, error: error.message };
+    if (existingEmail) {
+      // Returning player - restore their session
+      const session: PlayerSession = {
+        email: existingEmail.email,
+        username: existingEmail.username,
+        score: existingEmail.score,
+        level: existingEmail.current_level,
+        verified: true,
+        id: existingEmail.id
+      };
+      savePlayerSession(session);
+      return { success: true, player: session };
     }
-
-    // Save session locally
-    const session: PlayerSession = {
-      email: data.email,
-      username: data.username,
-      score: data.score,
-      level: data.current_level,
-      verified: true,
-      id: data.id
-    };
-    savePlayerSession(session);
-    localStorage.removeItem(PENDING_VERIFICATION_KEY);
-    localStorage.removeItem('local_score');
-    localStorage.removeItem('local_level');
-
-    return { success: true, player: session };
-  } catch (error) {
-    return { success: false, error: (error as Error).message };
   }
+
+  // Get any local scores to include
+  const levelScoresData = localStorage.getItem(LEVEL_SCORES_KEY);
+  const levelScores: Record<string, number> = levelScoresData ? JSON.parse(levelScoresData) : {};
+  const totalScore = Object.values(levelScores).reduce((sum, score) => sum + score, 0);
+  const highestLevel = Object.keys(levelScores).length > 0 
+    ? Math.max(...Object.keys(levelScores).map(Number)) 
+    : 1;
+
+  if (supabase) {
+    try {
+      // Create new player in database
+      const { data, error } = await supabase
+        .from('players')
+        .insert({
+          email: email.toLowerCase(),
+          username: username.toUpperCase(),
+          score: totalScore,
+          current_level: highestLevel,
+          verified: true,
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      // Save session locally
+      const session: PlayerSession = {
+        email: data.email,
+        username: data.username,
+        score: data.score,
+        level: data.current_level,
+        verified: true,
+        id: data.id
+      };
+      savePlayerSession(session);
+
+      return { success: true, player: session };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  // Offline mode - save locally only
+  const session: PlayerSession = {
+    email: email.toLowerCase(),
+    username: username.toUpperCase(),
+    score: totalScore,
+    level: highestLevel,
+    verified: true
+  };
+  savePlayerSession(session);
+
+  return { success: true, player: session };
 }
 
 /**
