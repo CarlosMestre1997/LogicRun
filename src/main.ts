@@ -71,6 +71,14 @@ async function initGame(): Promise<void> {
   // Initialize mobile commands if on mobile
   const mobileCommands = initMobileCommands(terminal, updateScore);
   
+  // Show while button on mobile if level has a laptop
+  if (level.laptop) {
+    const whileBtn = document.getElementById('while-btn');
+    if (whileBtn) {
+      whileBtn.style.display = 'block';
+    }
+  }
+  
   // Initialize modals
   const passwordModal = createPasswordModal(levels);
   

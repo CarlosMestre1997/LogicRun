@@ -343,6 +343,18 @@
     margin-left: 0.5rem;
   }
 
+  .command-while-body .while-body-hint {
+    color: #666;
+    font-size: 0.75rem;
+    font-style: italic;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .command-chip--nested {
+    background: var(--ui-gray);
+    margin-left: 0;
+  }
+
   .add-to-while-btn {
     background: transparent;
     border: 1px dashed #555;
@@ -396,13 +408,30 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  .command-btn--while {
+    background: #2a4a2a;
+    border-color: #0a5a0a;
+    color: #0f0;
+  }
+
   .command-btn:active {
     background: #555;
     transform: scale(0.95);
   }
 
+  .command-btn--while:active {
+    background: #3a5a3a;
+  }
+
   .command-btn.dragging {
     opacity: 0.5;
+  }
+
+  /* While loop command chips */
+  .command-chip--while-start,
+  .command-chip--while-end {
+    background: #2a4a2a;
+    border-color: #0a5a0a;
   }
 
   /* Adjust UI area to account for command palette and safe areas */
