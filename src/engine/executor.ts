@@ -236,8 +236,13 @@ export function createExecutor(level: Level): Executor {
     }
     
     // Helper to check and track visited goals (for levels with multiple goals)
+    // In levels with laptops, goals only count as visited if the character has the laptop
     function checkGoalsVisited(): void {
       if (level.goals && Array.isArray(level.goals)) {
+        // If level has a laptop, require it to be picked up before goals count
+        if (level.laptop !== undefined && !state.hasLaptop) {
+          return; // Don't mark goals as visited without the laptop
+        }
         level.goals.forEach(goal => {
           if (state.x === goal.x && state.y === goal.y && state.z === 0) {
             state.visitedGoals.add(`${goal.x},${goal.y}`);
