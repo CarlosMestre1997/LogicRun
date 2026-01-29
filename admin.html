@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Startie</title>
+  <style>
+    :root {
+      --black: #000;
+      --green: #0f0;
+      --white: #fff;
+      --gray: #333;
+    }
+    * { box-sizing: border-box; }
+    body {
+      background: var(--black);
+      color: var(--white);
+      font-family: 'Courier New', monospace;
+      margin: 0;
+      padding: 1rem;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid var(--green);
+      padding-bottom: 1rem;
+      margin-bottom: 1rem;
+    }
+    h1 { color: var(--green); margin: 0; }
+    .logout-btn {
+      background: #c00;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .stats {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+    .stat-box {
+      background: var(--gray);
+      border: 1px solid var(--green);
+      padding: 1rem;
+      min-width: 150px;
+    }
+    .stat-box h3 {
+      color: var(--green);
+      margin: 0 0 0.5rem 0;
+      font-size: 0.8rem;
+    }
+    .stat-box .value {
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .filters {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .filters input, .filters select {
+      background: var(--gray);
+      border: 1px solid var(--green);
+      color: var(--white);
+      padding: 0.5rem;
+      font-family: inherit;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid var(--gray);
+      padding: 0.5rem;
+      text-align: left;
+    }
+    th {
+      background: var(--gray);
+      color: var(--green);
+      cursor: pointer;
+    }
+    th:hover { background: #444; }
+    tr:hover { background: rgba(0,255,0,0.1); }
+    .verified { color: var(--green); }
+    .unverified { color: #888; }
+    .login-form {
+      max-width: 300px;
+      margin: 100px auto;
+      padding: 2rem;
+      border: 2px solid var(--green);
+    }
+    .login-form h2 { color: var(--green); margin-top: 0; }
+    .login-form input {
+      width: 100%;
+      background: var(--gray);
+      border: 1px solid var(--green);
+      color: var(--white);
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      font-family: inherit;
+    }
+    .login-form button {
+      width: 100%;
+      background: var(--green);
+      color: var(--black);
+      border: none;
+      padding: 0.75rem;
+      font-family: inherit;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .error { color: #f66; margin-bottom: 1rem; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <!-- Login Form -->
+  <div id="login-section" class="login-form">
+    <h2>🔒 Admin Login</h2>
+    <div id="login-error" class="error hidden"></div>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button id="login-btn">Login</button>
+  </div>
+
+  <!-- Admin Dashboard -->
+  <div id="admin-section" class="hidden">
+    <div class="header">
+      <h1>📊 Startie Admin</h1>
+      <button class="logout-btn" id="logout-btn">Logout</button>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="filters">
+      <input type="text" id="search" placeholder="Search email...">
+      <select id="verified-filter">
+        <option value="">All</option>
+        <option value="true">Verified</option>
+        <option value="false">Unverified</option>
+      </select>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th data-sort="email">Email</th>
+          <th data-sort="code">Username</th>
+          <th data-sort="score">Score</th>
+          <th data-sort="verified">Verified</th>
+          <th data-sort="created_at">Created</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+    const supabaseUrl = 'https://xsbtlnxugavlbbverdyk.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzYnRsbnZ1Z2F2bGJidmVyZHlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY0MTkwOTgsImV4cCI6MjA1MTk5NTA5OH0.VYzPf8i-TyEHqiMGHRP--G2Njp1n_KyJPGDRKDLWYUo';
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    let allData = [];
+    let sortCol = 'created_at';
+    let sortAsc = false;
+
+    // Check auth on load
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        showAdmin();
+      }
+    }
+
+    async function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const errorEl = document.getElementById('login-error');
+
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        errorEl.textContent = error.message;
+        errorEl.classList.remove('hidden');
+      } else {
+        showAdmin();
+      }
+    }
+
+    async function logout() {
+      await supabase.auth.signOut();
+      document.getElementById('login-section').classList.remove('hidden');
+      document.getElementById('admin-section').classList.add('hidden');
+    }
+
+    async function showAdmin() {
+      document.getElementById('login-section').classList.add('hidden');
+      document.getElementById('admin-section').classList.remove('hidden');
+      await loadData();
+    }
+
+    async function loadData() {
+      const { data, error } = await supabase
+        .from('leaderboard')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      allData = data || [];
+      renderStats();
+      renderTable();
+    }
+
+    function renderStats() {
+      const total = allData.length;
+      const verified = allData.filter(d => d.verified).length;
+      const uniqueEmails = new Set(allData.filter(d => d.email).map(d => d.email)).size;
+      const avgScore = total > 0 ? Math.round(allData.reduce((s, d) => s + d.score, 0) / total) : 0;
+      const maxScore = total > 0 ? Math.max(...allData.map(d => d.score)) : 0;
+
+      document.getElementById('stats').innerHTML = `
+        <div class="stat-box"><h3>Total Entries</h3><div class="value">${total}</div></div>
+        <div class="stat-box"><h3>Unique Players</h3><div class="value">${uniqueEmails}</div></div>
+        <div class="stat-box"><h3>Verified</h3><div class="value">${verified}</div></div>
+        <div class="stat-box"><h3>Avg Score</h3><div class="value">${avgScore}</div></div>
+        <div class="stat-box"><h3>Top Score</h3><div class="value">${maxScore}</div></div>
+      `;
+    }
+
+    function renderTable() {
+      const search = document.getElementById('search').value.toLowerCase();
+      const verifiedFilter = document.getElementById('verified-filter').value;
+
+      let filtered = allData.filter(d => {
+        if (search && !(d.email || '').toLowerCase().includes(search)) return false;
+        if (verifiedFilter === 'true' && !d.verified) return false;
+        if (verifiedFilter === 'false' && d.verified) return false;
+        return true;
+      });
+
+      filtered.sort((a, b) => {
+        let aVal = a[sortCol];
+        let bVal = b[sortCol];
+        if (sortCol === 'created_at') {
+          aVal = new Date(aVal).getTime();
+          bVal = new Date(bVal).getTime();
+        }
+        if (aVal < bVal) return sortAsc ? -1 : 1;
+        if (aVal > bVal) return sortAsc ? 1 : -1;
+        return 0;
+      });
+
+      document.getElementById('table-body').innerHTML = filtered.map(d => `
+        <tr>
+          <td>${d.email || '-'}</td>
+          <td>${d.code}</td>
+          <td>${d.score}</td>
+          <td class="${d.verified ? 'verified' : 'unverified'}">${d.verified ? '✓' : '✗'}</td>
+          <td>${new Date(d.created_at).toLocaleString()}</td>
+        </tr>
+      `).join('');
+    }
+
+    // Event listeners
+    document.getElementById('login-btn').onclick = login;
+    document.getElementById('logout-btn').onclick = logout;
+    document.getElementById('search').oninput = renderTable;
+    document.getElementById('verified-filter').onchange = renderTable;
+
+    document.querySelectorAll('th[data-sort]').forEach(th => {
+      th.onclick = () => {
+        const col = th.dataset.sort;
+        if (sortCol === col) {
+          sortAsc = !sortAsc;
+        } else {
+          sortCol = col;
+          sortAsc = true;
+        }
+        renderTable();
+      };
+    });
+
+    document.getElementById('password').onkeypress = (e) => {
+      if (e.key === 'Enter') login();
+    };
+
+    init();
+  </script>
+</body>
+</html>
