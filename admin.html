@@ -775,5 +775,15 @@
           renderScoresTable();
         } else if (currentTab === 'archives') {
           renderArchivesTable();
+        }
+      };
+    });
+
+    document.getElementById('password').onkeypress = (e) => {
+      if (e.key === 'Enter') login();
+    };
+
+    init();
+  </script>
 </body>
 </html>
