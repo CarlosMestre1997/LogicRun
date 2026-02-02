@@ -182,6 +182,14 @@
     .hidden { display: none !important; }
     .section { display: none; }
     .section.active { display: block; }
+    .archive-reason-input {
+      background: var(--gray);
+      border: 1px solid var(--green);
+      color: var(--white);
+      padding: 0.5rem;
+      font-family: inherit;
+      width: 200px;
+    }
     .confirm-modal {
       position: fixed;
       top: 0;
@@ -241,6 +249,7 @@
     <div class="tabs">
       <button class="tab active" data-tab="users">👥 Users</button>
       <button class="tab" data-tab="scores">🏆 Highscores</button>
+      <button class="tab" data-tab="archives">📦 Archives</button>
     </div>
 
     <!-- Users Section -->
@@ -274,9 +283,10 @@
     <!-- Scores Section -->
     <div id="scores-section" class="section">
       <div class="action-bar">
-        <button class="btn btn--warning" id="clear-scores-btn">⚠️ Clear All Highscores</button>
+        <button class="btn btn--warning" id="clear-scores-btn">⚠️ Archive All Highscores</button>
+        <input type="text" id="archive-reason" placeholder="Event name (e.g., Day 1)" class="archive-reason-input">
         <span style="color: #888; font-size: 0.85rem;">
-          This deletes all score entries but keeps user accounts (name, email, consent).
+          Moves all scores to archives. User accounts are preserved.
         </span>
       </div>
 
@@ -298,6 +308,35 @@
           </tr>
         </thead>
         <tbody id="scores-table-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Archives Section -->
+    <div id="archives-section" class="section">
+      <div class="filters">
+        <input type="text" id="archive-search" placeholder="Search username...">
+        <select id="archive-reason-filter">
+          <option value="">All Reasons</option>
+          <option value="manual_delete">Manual Delete</option>
+          <option value="event_reset">Event Reset</option>
+        </select>
+        <input type="date" id="archive-date-from" placeholder="From date">
+        <input type="date" id="archive-date-to" placeholder="To date">
+        <button class="btn" id="export-archives-btn">📥 Export CSV</button>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="user_username">Username</th>
+            <th data-sort="user_name">Name</th>
+            <th data-sort="score">Score</th>
+            <th data-sort="current_level">Level</th>
+            <th data-sort="archived_reason">Reason</th>
+            <th data-sort="archived_at">Archived</th>
+          </tr>
+        </thead>
+        <tbody id="archives-table-body"></tbody>
       </table>
     </div>
   </div>
@@ -323,6 +362,7 @@
 
     let usersData = [];
     let scoresData = [];
+    let archivesData = [];
     let sortCol = 'created_at';
     let sortAsc = false;
     let currentTab = 'users';
@@ -400,15 +440,29 @@
         }));
       }
 
+      // Load archives
+      const { data: archives, error: archivesError } = await supabase
+        .from('scores_archive')
+        .select('*')
+        .order('archived_at', { ascending: false });
+
+      if (archivesError) {
+        console.error('Error loading archives:', archivesError);
+      } else {
+        archivesData = archives || [];
+      }
+
       renderStats();
       renderUsersTable();
       renderScoresTable();
+      renderArchivesTable();
     }
 
     function renderStats() {
       const totalUsers = usersData.length;
       const consentedUsers = usersData.filter(u => u.consent).length;
       const totalScores = scoresData.length;
+      const totalArchived = archivesData.length;
       const avgScore = scoresData.length > 0 
         ? Math.round(scoresData.reduce((s, d) => s + d.score, 0) / scoresData.length) 
         : 0;
@@ -419,8 +473,8 @@
       document.getElementById('stats').innerHTML = `
         <div class="stat-box"><h3>Total Users</h3><div class="value">${totalUsers}</div></div>
         <div class="stat-box"><h3>Consented</h3><div class="value">${consentedUsers}</div></div>
-        <div class="stat-box"><h3>Score Entries</h3><div class="value">${totalScores}</div></div>
-        <div class="stat-box"><h3>Avg Score</h3><div class="value">${avgScore}</div></div>
+        <div class="stat-box"><h3>Active Scores</h3><div class="value">${totalScores}</div></div>
+        <div class="stat-box"><h3>Archived</h3><div class="value">${totalArchived}</div></div>
         <div class="stat-box"><h3>Top Score</h3><div class="value">${maxScore}</div></div>
       `;
     }
@@ -508,25 +562,69 @@
           <td>${s.current_level || '-'}</td>
           <td>${new Date(s.created_at).toLocaleString()}</td>
           <td>
-            <button class="btn btn--danger" onclick="deleteScore('${s.id}')">🗑️ Delete</button>
+            <button class="btn btn--danger" onclick="archiveScore('${s.id}')">📦 Archive</button>
           </td>
         </tr>
       `).join('');
     }
 
-    // Delete individual score
-    window.deleteScore = async function(scoreId) {
+    function renderArchivesTable() {
+      const search = document.getElementById('archive-search').value.toLowerCase();
+      const reasonFilter = document.getElementById('archive-reason-filter').value;
+      const dateFrom = document.getElementById('archive-date-from').value;
+      const dateTo = document.getElementById('archive-date-to').value;
+
+      let filtered = archivesData.filter(a => {
+        if (search && !(a.user_username || '').toLowerCase().includes(search)) return false;
+        if (reasonFilter && a.archived_reason !== reasonFilter) return false;
+        if (dateFrom && new Date(a.archived_at) < new Date(dateFrom)) return false;
+        if (dateTo && new Date(a.archived_at) > new Date(dateTo + 'T23:59:59')) return false;
+        return true;
+      });
+
+      filtered.sort((a, b) => {
+        let aVal = a[sortCol] || a['archived_at'];
+        let bVal = b[sortCol] || b['archived_at'];
+        if (sortCol === 'archived_at' || sortCol === 'created_at') {
+          aVal = new Date(aVal).getTime();
+          bVal = new Date(bVal).getTime();
+        }
+        if (aVal < bVal) return sortAsc ? -1 : 1;
+        if (aVal > bVal) return sortAsc ? 1 : -1;
+        return 0;
+      });
+
+      const tbody = document.getElementById('archives-table-body');
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-message">No archived scores</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(a => `
+        <tr>
+          <td>${a.user_username || '-'}</td>
+          <td>${a.user_name || '-'}</td>
+          <td>${a.score}</td>
+          <td>${a.current_level || '-'}</td>
+          <td>${a.archived_reason || '-'}</td>
+          <td>${new Date(a.archived_at).toLocaleString()}</td>
+        </tr>
+      `).join('');
+    }
+
+    // Archive individual score
+    window.archiveScore = async function(scoreId) {
       showConfirmModal(
-        'Delete Score',
-        'Are you sure you want to delete this score entry?',
+        'Archive Score',
+        'This will move the score to archives. The user can submit a new score afterwards.',
         async () => {
-          const { error } = await supabase
-            .from('scores')
-            .delete()
-            .eq('id', scoreId);
+          const { error } = await supabase.rpc('archive_score', { 
+            p_score_id: scoreId, 
+            p_reason: 'manual_delete' 
+          });
           
           if (error) {
-            alert('Error deleting score: ' + error.message);
+            alert('Error archiving score: ' + error.message);
           } else {
             await loadData();
           }
@@ -534,24 +632,51 @@
       );
     };
 
-    // Clear all scores
-    async function clearAllScores() {
+    // Archive all scores
+    async function archiveAllScores() {
+      const reason = document.getElementById('archive-reason').value.trim() || 'event_reset';
       showConfirmModal(
-        '⚠️ Clear All Highscores',
-        'This will DELETE ALL score entries but keep user accounts intact. This action cannot be undone!',
+        '⚠️ Archive All Highscores',
+        `This will move ALL scores to archives with reason "${reason}". Users will be able to submit new scores.`,
         async () => {
-          const { error } = await supabase
-            .from('scores')
-            .delete()
-            .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
+          const { error } = await supabase.rpc('archive_all_scores', { 
+            p_reason: reason 
+          });
 
           if (error) {
-            alert('Error clearing scores: ' + error.message);
+            alert('Error archiving scores: ' + error.message);
           } else {
             await loadData();
           }
         }
       );
+    }
+
+    // Export archives to CSV
+    function exportArchivesCSV() {
+      const headers = ['Username', 'Name', 'Email', 'Score', 'Level', 'Reason', 'Archived At', 'Original Date'];
+      const rows = archivesData.map(a => [
+        a.user_username || '',
+        a.user_name || '',
+        a.user_email || '',
+        a.score,
+        a.current_level || '',
+        a.archived_reason || '',
+        new Date(a.archived_at).toISOString(),
+        new Date(a.original_created_at).toISOString()
+      ]);
+
+      const csv = [headers, ...rows].map(row => row.map(cell => 
+        `"${String(cell).replace(/"/g, '""')}"`
+      ).join(',')).join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `startie-archives-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     // Confirmation modal
@@ -603,7 +728,7 @@
     // Event listeners
     document.getElementById('login-btn').onclick = login;
     document.getElementById('logout-btn').onclick = logout;
-    document.getElementById('clear-scores-btn').onclick = clearAllScores;
+    document.getElementById('clear-scores-btn').onclick = archiveAllScores;
     document.getElementById('export-users-btn').onclick = exportUsersCSV;
     document.getElementById('confirm-cancel').onclick = hideConfirmModal;
     document.getElementById('confirm-ok').onclick = async () => {
@@ -627,6 +752,13 @@
     document.getElementById('score-date-from').onchange = renderScoresTable;
     document.getElementById('score-date-to').onchange = renderScoresTable;
 
+    // Filter listeners - Archives
+    document.getElementById('archive-search').oninput = renderArchivesTable;
+    document.getElementById('archive-reason-filter').onchange = renderArchivesTable;
+    document.getElementById('archive-date-from').onchange = renderArchivesTable;
+    document.getElementById('archive-date-to').onchange = renderArchivesTable;
+    document.getElementById('export-archives-btn').onclick = exportArchivesCSV;
+
     // Sorting
     document.querySelectorAll('th[data-sort]').forEach(th => {
       th.onclick = () => {
@@ -639,17 +771,9 @@
         }
         if (currentTab === 'users') {
           renderUsersTable();
-        } else {
+        } else if (currentTab === 'scores') {
           renderScoresTable();
-        }
-      };
-    });
-
-    document.getElementById('password').onkeypress = (e) => {
-      if (e.key === 'Enter') login();
-    };
-
-    init();
-  </script>
+        } else if (currentTab === 'archives') {
+          renderArchivesTable();
 </body>
 </html>
