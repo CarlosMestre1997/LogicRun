@@ -10,6 +10,8 @@
       --green: #0f0;
       --white: #fff;
       --gray: #333;
+      --pink: #ff6fb8;
+      --red: #c00;
     }
     * { box-sizing: border-box; }
     body {
@@ -28,8 +30,9 @@
       margin-bottom: 1rem;
     }
     h1 { color: var(--green); margin: 0; }
+    h2 { color: var(--pink); margin: 1.5rem 0 1rem 0; font-size: 1.2rem; }
     .logout-btn {
-      background: #c00;
+      background: var(--red);
       color: white;
       border: none;
       padding: 0.5rem 1rem;
@@ -46,22 +49,42 @@
       background: var(--gray);
       border: 1px solid var(--green);
       padding: 1rem;
-      min-width: 150px;
+      min-width: 120px;
     }
     .stat-box h3 {
       color: var(--green);
       margin: 0 0 0.5rem 0;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
     }
     .stat-box .value {
-      font-size: 1.5rem;
+      font-size: 1.4rem;
       font-weight: bold;
+    }
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 1rem;
+    }
+    .tab {
+      background: var(--gray);
+      border: 1px solid var(--green);
+      color: var(--white);
+      padding: 0.75rem 1.5rem;
+      font-family: inherit;
+      cursor: pointer;
+      border-right: none;
+    }
+    .tab:last-child { border-right: 1px solid var(--green); }
+    .tab.active {
+      background: var(--green);
+      color: var(--black);
     }
     .filters {
       display: flex;
       gap: 1rem;
       margin-bottom: 1rem;
       flex-wrap: wrap;
+      align-items: center;
     }
     .filters input, .filters select {
       background: var(--gray);
@@ -70,14 +93,19 @@
       padding: 0.5rem;
       font-family: inherit;
     }
+    .filters input[type="date"] {
+      color-scheme: dark;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
+      margin-bottom: 1rem;
     }
     th, td {
       border: 1px solid var(--gray);
       padding: 0.5rem;
       text-align: left;
+      font-size: 0.9rem;
     }
     th {
       background: var(--gray);
@@ -86,8 +114,44 @@
     }
     th:hover { background: #444; }
     tr:hover { background: rgba(0,255,0,0.1); }
-    .verified { color: var(--green); }
-    .unverified { color: #888; }
+    .consent-yes { color: var(--green); }
+    .consent-no { color: #888; }
+    .btn {
+      background: var(--gray);
+      border: 1px solid var(--green);
+      color: var(--white);
+      padding: 0.3rem 0.6rem;
+      font-family: inherit;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .btn:hover { background: #444; }
+    .btn--danger {
+      border-color: var(--red);
+      color: var(--red);
+    }
+    .btn--danger:hover {
+      background: var(--red);
+      color: var(--white);
+    }
+    .btn--primary {
+      background: var(--green);
+      color: var(--black);
+      font-weight: bold;
+    }
+    .btn--warning {
+      background: #f90;
+      color: var(--black);
+      border-color: #f90;
+    }
+    .action-bar {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: var(--gray);
+      border: 1px solid var(--green);
+    }
     .login-form {
       max-width: 300px;
       margin: 100px auto;
@@ -116,6 +180,42 @@
     }
     .error { color: #f66; margin-bottom: 1rem; }
     .hidden { display: none; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .confirm-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .confirm-modal-content {
+      background: var(--gray);
+      border: 2px solid var(--green);
+      padding: 2rem;
+      max-width: 400px;
+      text-align: center;
+    }
+    .confirm-modal-content h3 {
+      color: var(--green);
+      margin-top: 0;
+    }
+    .confirm-modal-content .btn-group {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.5rem;
+      justify-content: center;
+    }
+    .empty-message {
+      text-align: center;
+      padding: 2rem;
+      color: #666;
+    }
   </style>
 </head>
 <body>
@@ -137,27 +237,81 @@
 
     <div class="stats" id="stats"></div>
 
-    <div class="filters">
-      <input type="text" id="search" placeholder="Search email...">
-      <select id="verified-filter">
-        <option value="">All</option>
-        <option value="true">Verified</option>
-        <option value="false">Unverified</option>
-      </select>
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="users">👥 Users</button>
+      <button class="tab" data-tab="scores">🏆 Highscores</button>
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th data-sort="email">Email</th>
-          <th data-sort="code">Username</th>
-          <th data-sort="score">Score</th>
-          <th data-sort="verified">Verified</th>
-          <th data-sort="created_at">Created</th>
-        </tr>
-      </thead>
-      <tbody id="table-body"></tbody>
-    </table>
+    <!-- Users Section -->
+    <div id="users-section" class="section active">
+      <div class="filters">
+        <input type="text" id="user-search" placeholder="Search name/email...">
+        <select id="consent-filter">
+          <option value="">All Consent</option>
+          <option value="true">Consented</option>
+          <option value="false">Not Consented</option>
+        </select>
+        <input type="date" id="user-date-from" placeholder="From date">
+        <input type="date" id="user-date-to" placeholder="To date">
+        <button class="btn" id="export-users-btn">📥 Export CSV</button>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="name">Name</th>
+            <th data-sort="username">Username</th>
+            <th data-sort="email">Email</th>
+            <th data-sort="consent">Consent</th>
+            <th data-sort="created_at">Registered</th>
+          </tr>
+        </thead>
+        <tbody id="users-table-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Scores Section -->
+    <div id="scores-section" class="section">
+      <div class="action-bar">
+        <button class="btn btn--warning" id="clear-scores-btn">⚠️ Clear All Highscores</button>
+        <span style="color: #888; font-size: 0.85rem;">
+          This deletes all score entries but keeps user accounts (name, email, consent).
+        </span>
+      </div>
+
+      <div class="filters">
+        <input type="text" id="score-search" placeholder="Search username...">
+        <input type="date" id="score-date-from" placeholder="From date">
+        <input type="date" id="score-date-to" placeholder="To date">
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="username">Username</th>
+            <th data-sort="name">Name</th>
+            <th data-sort="score">Score</th>
+            <th data-sort="current_level">Level</th>
+            <th data-sort="created_at">Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="scores-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirm-modal" class="confirm-modal hidden">
+    <div class="confirm-modal-content">
+      <h3 id="confirm-title">Confirm Action</h3>
+      <p id="confirm-message">Are you sure?</p>
+      <div class="btn-group">
+        <button class="btn" id="confirm-cancel">Cancel</button>
+        <button class="btn btn--danger" id="confirm-ok">Confirm</button>
+      </div>
+    </div>
   </div>
 
   <script type="module">
@@ -167,9 +321,12 @@
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzYnRsbnZ1Z2F2bGJidmVyZHlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY0MTkwOTgsImV4cCI6MjA1MTk5NTA5OH0.VYzPf8i-TyEHqiMGHRP--G2Njp1n_KyJPGDRKDLWYUo';
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    let allData = [];
+    let usersData = [];
+    let scoresData = [];
     let sortCol = 'created_at';
     let sortAsc = false;
+    let currentTab = 'users';
+    let pendingAction = null;
 
     // Check auth on load
     async function init() {
@@ -207,45 +364,76 @@
     }
 
     async function loadData() {
-      const { data, error } = await supabase
-        .from('leaderboard')
+      // Load users
+      const { data: users, error: usersError } = await supabase
+        .from('users')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error(error);
-        return;
+      if (!usersError) {
+        usersData = users || [];
       }
 
-      allData = data || [];
+      // Load scores with user info
+      const { data: scores, error: scoresError } = await supabase
+        .from('scores')
+        .select(`
+          *,
+          users (
+            name,
+            username,
+            email
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (!scoresError) {
+        scoresData = (scores || []).map(s => ({
+          ...s,
+          name: s.users?.name || '-',
+          username: s.users?.username || '-',
+          email: s.users?.email || '-'
+        }));
+      }
+
       renderStats();
-      renderTable();
+      renderUsersTable();
+      renderScoresTable();
     }
 
     function renderStats() {
-      const total = allData.length;
-      const verified = allData.filter(d => d.verified).length;
-      const uniqueEmails = new Set(allData.filter(d => d.email).map(d => d.email)).size;
-      const avgScore = total > 0 ? Math.round(allData.reduce((s, d) => s + d.score, 0) / total) : 0;
-      const maxScore = total > 0 ? Math.max(...allData.map(d => d.score)) : 0;
+      const totalUsers = usersData.length;
+      const consentedUsers = usersData.filter(u => u.consent).length;
+      const totalScores = scoresData.length;
+      const avgScore = scoresData.length > 0 
+        ? Math.round(scoresData.reduce((s, d) => s + d.score, 0) / scoresData.length) 
+        : 0;
+      const maxScore = scoresData.length > 0 
+        ? Math.max(...scoresData.map(d => d.score)) 
+        : 0;
 
       document.getElementById('stats').innerHTML = `
-        <div class="stat-box"><h3>Total Entries</h3><div class="value">${total}</div></div>
-        <div class="stat-box"><h3>Unique Players</h3><div class="value">${uniqueEmails}</div></div>
-        <div class="stat-box"><h3>Verified</h3><div class="value">${verified}</div></div>
+        <div class="stat-box"><h3>Total Users</h3><div class="value">${totalUsers}</div></div>
+        <div class="stat-box"><h3>Consented</h3><div class="value">${consentedUsers}</div></div>
+        <div class="stat-box"><h3>Score Entries</h3><div class="value">${totalScores}</div></div>
         <div class="stat-box"><h3>Avg Score</h3><div class="value">${avgScore}</div></div>
         <div class="stat-box"><h3>Top Score</h3><div class="value">${maxScore}</div></div>
       `;
     }
 
-    function renderTable() {
-      const search = document.getElementById('search').value.toLowerCase();
-      const verifiedFilter = document.getElementById('verified-filter').value;
+    function renderUsersTable() {
+      const search = document.getElementById('user-search').value.toLowerCase();
+      const consentFilter = document.getElementById('consent-filter').value;
+      const dateFrom = document.getElementById('user-date-from').value;
+      const dateTo = document.getElementById('user-date-to').value;
 
-      let filtered = allData.filter(d => {
-        if (search && !(d.email || '').toLowerCase().includes(search)) return false;
-        if (verifiedFilter === 'true' && !d.verified) return false;
-        if (verifiedFilter === 'false' && d.verified) return false;
+      let filtered = usersData.filter(u => {
+        if (search && !((u.name || '').toLowerCase().includes(search) || 
+                        (u.email || '').toLowerCase().includes(search))) return false;
+        if (consentFilter === 'true' && !u.consent) return false;
+        if (consentFilter === 'false' && u.consent) return false;
+        if (dateFrom && new Date(u.created_at) < new Date(dateFrom)) return false;
+        if (dateTo && new Date(u.created_at) > new Date(dateTo + 'T23:59:59')) return false;
         return true;
       });
 
@@ -261,23 +449,181 @@
         return 0;
       });
 
-      document.getElementById('table-body').innerHTML = filtered.map(d => `
+      const tbody = document.getElementById('users-table-body');
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-message">No users found</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(u => `
         <tr>
-          <td>${d.email || '-'}</td>
-          <td>${d.code}</td>
-          <td>${d.score}</td>
-          <td class="${d.verified ? 'verified' : 'unverified'}">${d.verified ? '✓' : '✗'}</td>
-          <td>${new Date(d.created_at).toLocaleString()}</td>
+          <td>${u.name || '-'}</td>
+          <td>${u.username}</td>
+          <td>${u.email || '-'}</td>
+          <td class="${u.consent ? 'consent-yes' : 'consent-no'}">${u.consent ? '✓ Yes' : '✗ No'}</td>
+          <td>${new Date(u.created_at).toLocaleString()}</td>
         </tr>
       `).join('');
+    }
+
+    function renderScoresTable() {
+      const search = document.getElementById('score-search').value.toLowerCase();
+      const dateFrom = document.getElementById('score-date-from').value;
+      const dateTo = document.getElementById('score-date-to').value;
+
+      let filtered = scoresData.filter(s => {
+        if (search && !(s.username || '').toLowerCase().includes(search)) return false;
+        if (dateFrom && new Date(s.created_at) < new Date(dateFrom)) return false;
+        if (dateTo && new Date(s.created_at) > new Date(dateTo + 'T23:59:59')) return false;
+        return true;
+      });
+
+      filtered.sort((a, b) => {
+        let aVal = a[sortCol];
+        let bVal = b[sortCol];
+        if (sortCol === 'created_at') {
+          aVal = new Date(aVal).getTime();
+          bVal = new Date(bVal).getTime();
+        }
+        if (aVal < bVal) return sortAsc ? -1 : 1;
+        if (aVal > bVal) return sortAsc ? 1 : -1;
+        return 0;
+      });
+
+      const tbody = document.getElementById('scores-table-body');
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-message">No scores found</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(s => `
+        <tr>
+          <td>${s.username}</td>
+          <td>${s.name}</td>
+          <td>${s.score}</td>
+          <td>${s.current_level || '-'}</td>
+          <td>${new Date(s.created_at).toLocaleString()}</td>
+          <td>
+            <button class="btn btn--danger" onclick="deleteScore('${s.id}')">🗑️ Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Delete individual score
+    window.deleteScore = async function(scoreId) {
+      showConfirmModal(
+        'Delete Score',
+        'Are you sure you want to delete this score entry?',
+        async () => {
+          const { error } = await supabase
+            .from('scores')
+            .delete()
+            .eq('id', scoreId);
+          
+          if (error) {
+            alert('Error deleting score: ' + error.message);
+          } else {
+            await loadData();
+          }
+        }
+      );
+    };
+
+    // Clear all scores
+    async function clearAllScores() {
+      showConfirmModal(
+        '⚠️ Clear All Highscores',
+        'This will DELETE ALL score entries but keep user accounts intact. This action cannot be undone!',
+        async () => {
+          const { error } = await supabase
+            .from('scores')
+            .delete()
+            .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
+
+          if (error) {
+            alert('Error clearing scores: ' + error.message);
+          } else {
+            await loadData();
+          }
+        }
+      );
+    }
+
+    // Confirmation modal
+    function showConfirmModal(title, message, onConfirm) {
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-message').textContent = message;
+      document.getElementById('confirm-modal').classList.remove('hidden');
+      pendingAction = onConfirm;
+    }
+
+    function hideConfirmModal() {
+      document.getElementById('confirm-modal').classList.add('hidden');
+      pendingAction = null;
+    }
+
+    // Export users to CSV
+    function exportUsersCSV() {
+      const headers = ['Name', 'Username', 'Email', 'Consent', 'Registered'];
+      const rows = usersData.map(u => [
+        u.name || '',
+        u.username,
+        u.email || '',
+        u.consent ? 'Yes' : 'No',
+        new Date(u.created_at).toISOString()
+      ]);
+
+      const csv = [headers, ...rows].map(row => row.map(cell => 
+        `"${String(cell).replace(/"/g, '""')}"`
+      ).join(',')).join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `startie-users-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Tab switching
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.getElementById(`${tab}-section`).classList.add('active');
     }
 
     // Event listeners
     document.getElementById('login-btn').onclick = login;
     document.getElementById('logout-btn').onclick = logout;
-    document.getElementById('search').oninput = renderTable;
-    document.getElementById('verified-filter').onchange = renderTable;
+    document.getElementById('clear-scores-btn').onclick = clearAllScores;
+    document.getElementById('export-users-btn').onclick = exportUsersCSV;
+    document.getElementById('confirm-cancel').onclick = hideConfirmModal;
+    document.getElementById('confirm-ok').onclick = async () => {
+      if (pendingAction) await pendingAction();
+      hideConfirmModal();
+    };
 
+    // Tab listeners
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.onclick = () => switchTab(tab.dataset.tab);
+    });
+
+    // Filter listeners - Users
+    document.getElementById('user-search').oninput = renderUsersTable;
+    document.getElementById('consent-filter').onchange = renderUsersTable;
+    document.getElementById('user-date-from').onchange = renderUsersTable;
+    document.getElementById('user-date-to').onchange = renderUsersTable;
+
+    // Filter listeners - Scores
+    document.getElementById('score-search').oninput = renderScoresTable;
+    document.getElementById('score-date-from').onchange = renderScoresTable;
+    document.getElementById('score-date-to').onchange = renderScoresTable;
+
+    // Sorting
     document.querySelectorAll('th[data-sort]').forEach(th => {
       th.onclick = () => {
         const col = th.dataset.sort;
@@ -287,7 +633,11 @@
           sortCol = col;
           sortAsc = true;
         }
-        renderTable();
+        if (currentTab === 'users') {
+          renderUsersTable();
+        } else {
+          renderScoresTable();
+        }
       };
     });
 

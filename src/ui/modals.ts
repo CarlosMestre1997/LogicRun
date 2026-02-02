@@ -1,5 +1,7 @@
 // Modal management
-import type { ModalController, LevelInfo, RegistrationResult } from '../types';
+import type { ModalController, LevelInfo, RegistrationResult, RegistrationData } from '../types';
+
+export type { RegistrationData };
 
 export function createPasswordModal(levels: Record<number, LevelInfo>): ModalController {
   const modal = document.createElement('div');
@@ -119,9 +121,19 @@ export function createIntroModal(levelNumber: number, onClose: (() => void) | nu
 }
 
 /**
- * Create registration modal for capturing email + username after level 1
+ * Registration data interface
  */
-export function createRegistrationModal(onRegister: (email: string, username: string) => Promise<RegistrationResult>): ModalController {
+export interface RegistrationData {
+  name: string;
+  username: string;
+  email: string;
+  consent: boolean;
+}
+
+/**
+ * Create registration modal for capturing user data after level 1
+ */
+export function createRegistrationModal(onRegister: (data: RegistrationData) => Promise<RegistrationResult>): ModalController {
   const modal = document.createElement('div');
   modal.id = 'registration-modal';
   modal.className = 'modal';
@@ -130,9 +142,14 @@ export function createRegistrationModal(onRegister: (email: string, username: st
       <div class="modal-body">
         <h2 class="modal-title modal-title--tight">Join the Leaderboard!</h2>
         <p class="modal-text--muted">
-          Enter your email to compete with other players!<br>
+          Enter your details to compete with other players!<br>
           Your scores will update in real-time as you progress.
         </p>
+        
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" id="reg-name" placeholder="Your Name" class="form-input">
+        </div>
         
         <div class="form-group">
           <label class="form-label">Email Address</label>
@@ -142,6 +159,13 @@ export function createRegistrationModal(onRegister: (email: string, username: st
         <div class="form-group">
           <label class="form-label">Username (3 characters)</label>
           <input type="text" id="reg-username" placeholder="ABC" maxlength="3" class="form-input form-input--username">
+        </div>
+        
+        <div class="form-group form-group--checkbox">
+          <label class="checkbox-label">
+            <input type="checkbox" id="reg-consent" class="form-checkbox">
+            <span class="checkbox-text">I agree to receive StartSchool announcements</span>
+          </label>
         </div>
         
         <div id="reg-error" class="form-error"></div>
@@ -155,8 +179,10 @@ export function createRegistrationModal(onRegister: (email: string, username: st
   
   document.getElementById('modal-container')?.appendChild(modal);
   
+  const nameInput = modal.querySelector('#reg-name') as HTMLInputElement;
   const emailInput = modal.querySelector('#reg-email') as HTMLInputElement;
   const usernameInput = modal.querySelector('#reg-username') as HTMLInputElement;
+  const consentCheckbox = modal.querySelector('#reg-consent') as HTMLInputElement;
   const errorDiv = modal.querySelector('#reg-error') as HTMLDivElement;
   const submitBtn = modal.querySelector('#reg-submit') as HTMLButtonElement;
   
@@ -167,10 +193,18 @@ export function createRegistrationModal(onRegister: (email: string, username: st
   });
   
   submitBtn.onclick = async () => {
+    const name = nameInput.value.trim();
     const email = emailInput.value.trim();
     const username = usernameInput.value.trim().toUpperCase();
+    const consent = consentCheckbox.checked;
     
     errorDiv.textContent = '';
+    
+    // Validate name
+    if (!name || name.length < 2) {
+      errorDiv.textContent = 'Please enter your name (at least 2 characters)';
+      return;
+    }
     
     // Validate email format
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -188,7 +222,7 @@ export function createRegistrationModal(onRegister: (email: string, username: st
     submitBtn.textContent = 'Starting...';
     
     try {
-      const result = await onRegister(email, username);
+      const result = await onRegister({ name, email, username, consent });
       
       if (result.success) {
         // Registration successful - close modal and start playing
@@ -205,7 +239,10 @@ export function createRegistrationModal(onRegister: (email: string, username: st
     }
   };
   
-  // Enter key submits
+  // Enter key navigation
+  nameInput.addEventListener('keypress', (e: KeyboardEvent) => {
+    if (e.key === 'Enter') emailInput.focus();
+  });
   emailInput.addEventListener('keypress', (e: KeyboardEvent) => {
     if (e.key === 'Enter') usernameInput.focus();
   });
@@ -216,7 +253,7 @@ export function createRegistrationModal(onRegister: (email: string, username: st
   return {
     show: () => {
       modal.style.display = 'block';
-      setTimeout(() => emailInput.focus(), 100);
+      setTimeout(() => nameInput.focus(), 100);
     },
     hide: () => {
       modal.style.display = 'none';

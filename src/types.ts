@@ -162,11 +162,21 @@ export interface Animation {
 // Player session for leaderboard
 export interface PlayerSession {
   id?: string;
+  name: string;
   email: string;
   username: string;
   score: number;
   level: number;
   verified: boolean;
+  consent: boolean;
+}
+
+// Registration data from modal
+export interface RegistrationData {
+  name: string;
+  username: string;
+  email: string;
+  consent: boolean;
 }
 
 // Pending verification data
@@ -180,6 +190,7 @@ export interface PendingVerification {
 export interface LeaderboardEntry {
   code?: string;
   username?: string;
+  name?: string;
   score: number;
   verified?: boolean;
   date?: string;
