@@ -71,7 +71,13 @@ export async function signInExistingPlayer(email: string): Promise<{ success: bo
       .limit(1)
       .single();
 
-    // Restore session locally
+    // IMPORTANT: Clear localStorage level scores to sync with database
+    // This ensures that if scores were archived, the player starts fresh
+    localStorage.removeItem(LEVEL_SCORES_KEY);
+    localStorage.removeItem('local_score');
+    localStorage.removeItem('local_level');
+
+    // Restore session locally with database values
     const session: PlayerSession = {
       id: userData.id,
       name: userData.name,
@@ -83,9 +89,6 @@ export async function signInExistingPlayer(email: string): Promise<{ success: bo
       consent: userData.consent
     };
     savePlayerSession(session);
-    
-    // Clear any stale level scores from localStorage to avoid conflicts
-    localStorage.removeItem(LEVEL_SCORES_KEY);
 
     return { success: true, player: session };
   } catch (error) {
@@ -145,6 +148,12 @@ export async function registerPlayer(data: RegistrationData): Promise<Registrati
           .update({ consent, updated_at: new Date().toISOString() })
           .eq('id', existingUser.id);
       }
+
+      // IMPORTANT: Clear localStorage to sync with database
+      // If scores were archived, player needs to start fresh
+      localStorage.removeItem(LEVEL_SCORES_KEY);
+      localStorage.removeItem('local_score');
+      localStorage.removeItem('local_level');
 
       const session: PlayerSession = {
         id: existingUser.id,

@@ -95,8 +95,8 @@ BEGIN
   JOIN public.users u ON s.user_id = u.id
   WHERE s.id = p_score_id;
   
-  -- Delete from active scores
-  DELETE FROM public.scores WHERE id = p_score_id;
+  -- Delete from active scores (explicit WHERE for Supabase RLS)
+  DELETE FROM public.scores WHERE scores.id = p_score_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -138,8 +138,8 @@ BEGIN
   -- Get count of archived records
   GET DIAGNOSTICS archived_count = ROW_COUNT;
   
-  -- Delete all from active scores
-  DELETE FROM public.scores;
+  -- Delete all from active scores (explicit WHERE true for Supabase RLS)
+  DELETE FROM public.scores WHERE true;
   
   RETURN archived_count;
 END;
