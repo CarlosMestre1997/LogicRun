@@ -11,6 +11,7 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         play: resolve(__dirname, 'play.html'),
         highscores: resolve(__dirname, 'highscores.html'),
+        admin: resolve(__dirname, 'admin.html'),
       },
     },
   },
