@@ -148,7 +148,7 @@ export function createRegistrationModal(onRegister: (data: RegistrationData) => 
         
         <div class="form-group">
           <label class="form-label">Full Name</label>
-          <input type="text" id="reg-name" placeholder="Your Name" class="form-input">
+          <input type="text" id="reg-name" placeholder="Your Name" maxlength="30" class="form-input">
         </div>
         
         <div class="form-group">
@@ -203,6 +203,10 @@ export function createRegistrationModal(onRegister: (data: RegistrationData) => 
     // Validate name
     if (!name || name.length < 2) {
       errorDiv.textContent = 'Please enter your name (at least 2 characters)';
+      return;
+    }
+    if (name.length > 30) {
+      errorDiv.textContent = 'Name must be 30 characters or less';
       return;
     }
     
