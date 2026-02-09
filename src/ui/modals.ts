@@ -121,16 +121,6 @@ export function createIntroModal(levelNumber: number, onClose: (() => void) | nu
 }
 
 /**
- * Registration data interface
- */
-export interface RegistrationData {
-  name: string;
-  username: string;
-  email: string;
-  consent: boolean;
-}
-
-/**
  * Create registration modal for capturing user data after level 1
  */
 export function createRegistrationModal(onRegister: (data: RegistrationData) => Promise<RegistrationResult>): ModalController {
@@ -148,7 +138,7 @@ export function createRegistrationModal(onRegister: (data: RegistrationData) => 
         
         <div class="form-group">
           <label class="form-label">Full Name</label>
-          <input type="text" id="reg-name" placeholder="Your Name" maxlength="30" class="form-input">
+          <input type="text" id="reg-name" placeholder="Your Name (max 30 characters)" maxlength="30" class="form-input">
         </div>
         
         <div class="form-group">
