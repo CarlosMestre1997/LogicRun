@@ -37,6 +37,8 @@ export function parse(text: string): ParseResult {
   const actions: Action[] = [];
   let i = 0;
   
+  let whileCount = 0; // Track number of while(hacking) loops
+  
   while (i < lines.length) {
     const line = lines[i];
     
@@ -46,6 +48,11 @@ export function parse(text: string): ParseResult {
       const condition = whileMatch[1];
       if (condition !== 'hacking') {
         return { error: `Unknown while condition: ${condition}. Use 'hacking' (you need the laptop first)` };
+      }
+      
+      whileCount++;
+      if (whileCount > 1) {
+        return { error: 'Only one while(hacking) loop allowed per level' };
       }
       
       // Collect inner commands until closing brace

@@ -138,6 +138,7 @@ export function initMobileCommands(terminal: HTMLTextAreaElement, onCommandsChan
           e.stopPropagation();
           commandItems.splice(index, 1);
           updateTerminalFromCommands();
+          updateWhileButtonState();
           if (onCommandsChange) onCommandsChange();
         };
         
@@ -217,9 +218,26 @@ export function initMobileCommands(terminal: HTMLTextAreaElement, onCommandsChan
     return null;
   }
 
+  // Update while button enabled/disabled state
+  function updateWhileButtonState(): void {
+    const whileBtn = document.getElementById('while-btn');
+    if (!whileBtn) return;
+    const hasWhile = commandItems.some(item => item.type === 'while');
+    if (hasWhile) {
+      whileBtn.classList.add('disabled');
+      (whileBtn as HTMLButtonElement).disabled = true;
+    } else {
+      whileBtn.classList.remove('disabled');
+      (whileBtn as HTMLButtonElement).disabled = false;
+    }
+  }
+
   // Add command - checks if there's an active while block to add to
   function addCommand(command: string, targetWhileIndex: number = -1): void {
     if (command === 'while') {
+      // Only allow one while(hacking) per level
+      const hasWhile = commandItems.some(item => item.type === 'while');
+      if (hasWhile) return;
       // Add while block
       commandItems.push({ type: 'while', value: 'while', children: [] });
     } else if (targetWhileIndex >= 0 && commandItems[targetWhileIndex]?.type === 'while') {
@@ -242,6 +260,7 @@ export function initMobileCommands(terminal: HTMLTextAreaElement, onCommandsChan
       }
     }
     updateTerminalFromCommands();
+    updateWhileButtonState();
     if (onCommandsChange) onCommandsChange();
   }
 
@@ -363,6 +382,7 @@ export function initMobileCommands(terminal: HTMLTextAreaElement, onCommandsChan
 
   // Initialize
   updateTerminalFromCommands();
+  updateWhileButtonState();
   
   return {
     getCommands: () => flattenCommands(commandItems).join('\n'),
@@ -385,6 +405,7 @@ export function initMobileCommands(terminal: HTMLTextAreaElement, onCommandsChan
       });
       
       updateTerminalFromCommands();
+      updateWhileButtonState();
     }
   };
 }

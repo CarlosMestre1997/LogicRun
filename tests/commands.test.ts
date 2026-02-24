@@ -68,6 +68,11 @@ describe('Command Parser', () => {
       const result = parse('while(hacking) {\nmove()');
       expect(result.error).toBe('Unclosed while loop');
     });
+
+    it('returns error for multiple while(hacking) loops', () => {
+      const result = parse('while(hacking) {\nmove()\n}\nwhile(hacking) {\nmove()\n}');
+      expect(result.error).toBe('Only one while(hacking) loop allowed per level');
+    });
   });
 
   describe('terminal formatting', () => {

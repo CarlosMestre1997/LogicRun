@@ -2,7 +2,7 @@
 import type { Level, Engine } from '../types';
 import { parse } from './commands';
 import { createExecutor } from './executor';
-import { calculateScore, countCommands } from './rules';
+import { calculateScore, countCommands, checkWinCondition } from './rules';
 
 export function createEngine(level: Level): Engine {
   const executor = createExecutor(level);
@@ -15,4 +15,4 @@ export function createEngine(level: Level): Engine {
   };
 }
 
-export { calculateScore, countCommands };
+export { calculateScore, countCommands, checkWinCondition };

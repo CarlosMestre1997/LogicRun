@@ -423,6 +423,13 @@
     background: #3a5a3a;
   }
 
+  .command-btn.disabled,
+  .command-btn.disabled:active {
+    opacity: 0.35;
+    pointer-events: none;
+    cursor: not-allowed;
+  }
+
   .command-btn.dragging {
     opacity: 0.5;
   }

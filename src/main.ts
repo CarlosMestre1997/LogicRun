@@ -1,6 +1,6 @@
 // Main game initialization for play page
 import type { LevelEntry, LeaderboardEntry, GameState, AnimationState } from './types';
-import { createEngine, calculateScore, countCommands } from './engine/index';
+import { createEngine, calculateScore, countCommands, checkWinCondition } from './engine/index';
 import { drawLevel, initRenderer } from './render/index';
 import { levels, getLevelByPassword, getLevelByNumber } from './levels/index';
 import { initSounds, loadSoundPreference, toggleSound, isSoundEnabled, playBackgroundMusic, saveMusicPosition } from './utils/sounds';
@@ -270,13 +270,8 @@ async function initGame(): Promise<void> {
       if (s.failed) {
         status.textContent = 'Game Over — Try Again';
       } else {
-        // Check win condition
-        const isAtGoal = level.goals.some(g => s.x === g.x && s.y === g.y);
-        
-        // For multi-goal levels, check if all goals are visited
-        const hasCompletedLevel = level.goals.length === 1 
-          ? isAtGoal
-          : s.visitedGoals.size >= level.goals.length;
+        // Check win condition (includes laptop requirement for laptop levels)
+        const hasCompletedLevel = checkWinCondition(s, level);
         
         if (hasCompletedLevel) {
           const commandCount = countCommands(result.actions!);
